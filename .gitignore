@@ -1,0 +1,25 @@
+# Gradle
+.gradle/
+gradle/
+build/
+
+# IntelliJ / Android Studio
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs & temp
+*.log
+*.tmp
+*.swp
+*~
+
+# Local machine-only config (if present)
+local.properties
+.claude/settings.local.json

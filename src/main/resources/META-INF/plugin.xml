@@ -1,0 +1,30 @@
+<idea-plugin>
+    <id>org.sajith.claudecode.plugin</id>
+    <name>Claude Code</name>
+    <version>0.1.0</version>
+    <vendor>Claude Code</vendor>
+
+    <description><![CDATA[
+    Integrates Claude Code CLI sessions directly into your IDE.
+    Open multiple Claude Code terminal sessions, switch between them, and browse session history.
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow id="Claude Code"
+                    anchor="bottom"
+                    secondary="false"
+                    factoryClass="org.sajith.claudecode.plugin.toolwindow.ClaudeCodeToolWindowFactory"
+                    icon="/icons/claude-code.svg"/>
+
+        <applicationConfigurable
+                id="org.sajith.claudecode.plugin.settings"
+                groupId="tools"
+                displayName="Claude Code Plugin"
+                instance="org.sajith.claudecode.plugin.settings.ClaudeCodeSettingsConfigurable"/>
+
+        <applicationService
+                serviceImplementation="org.sajith.claudecode.plugin.settings.ClaudeCodeSettings"/>
+    </extensions>
+</idea-plugin>
