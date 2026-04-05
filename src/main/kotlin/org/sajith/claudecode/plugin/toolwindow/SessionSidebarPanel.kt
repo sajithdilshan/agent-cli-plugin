@@ -13,18 +13,20 @@ import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Cursor
 import java.awt.Dimension
-import java.awt.FlowLayout
 import java.awt.Font
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import javax.swing.BorderFactory
+import javax.swing.Box
+import javax.swing.BoxLayout
 import javax.swing.DefaultListModel
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JList
+import javax.swing.JMenuItem
 import javax.swing.JOptionPane
 import javax.swing.JPanel
+import javax.swing.JPopupMenu
 import javax.swing.ListCellRenderer
 import javax.swing.ListSelectionModel
 import javax.swing.SwingConstants
@@ -43,43 +45,95 @@ class SessionSidebarPanel(
     private val sessionList = JBList(sessionListModel)
     private var selectedSession: ClaudeCodeSession? = null
 
-    init {
-        preferredSize = Dimension(JBUI.scale(180), 0)
-        minimumSize = Dimension(JBUI.scale(140), 0)
-        background = JBColor.PanelBackground
-        border = MatteBorder(0, 0, 0, 1, JBColor.border())
+    private val sessionListPanel: JPanel
+    private lateinit var collapseButton: JButton
+    private var isCollapsed = false
 
-        add(createToolbar(), BorderLayout.NORTH)
-        add(createSessionList(), BorderLayout.CENTER)
+    init {
+        background = JBColor.PanelBackground
+
+        // Narrow vertical icon strip (always visible)
+        val iconStrip = createIconStrip()
+        add(iconStrip, BorderLayout.WEST)
+
+        // Collapsible session list panel
+        sessionListPanel = JPanel(BorderLayout()).apply {
+            background = JBColor.PanelBackground
+            border = MatteBorder(0, 0, 0, 1, JBColor.border())
+            preferredSize = Dimension(JBUI.scale(160), 0)
+            minimumSize = Dimension(JBUI.scale(120), 0)
+            add(createSessionList(), BorderLayout.CENTER)
+        }
+        add(sessionListPanel, BorderLayout.CENTER)
     }
 
-    private fun createToolbar(): JPanel {
-        val toolbar = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), JBUI.scale(4)))
-        toolbar.background = JBColor.PanelBackground
-        toolbar.border = BorderFactory.createCompoundBorder(
-            MatteBorder(0, 0, 1, 0, JBColor.border()),
-            JBUI.Borders.empty(2)
-        )
+    private fun createIconStrip(): JPanel {
+        val strip = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+            background = JBColor.PanelBackground
+            border = MatteBorder(0, 0, 0, 1, JBColor.border())
+            preferredSize = Dimension(JBUI.scale(30), 0)
+        }
 
-        val newSessionButton = JButton("+").apply {
-            toolTipText = "New Claude Code Session"
-            preferredSize = Dimension(JBUI.scale(28), JBUI.scale(28))
+        val buttonSize = Dimension(JBUI.scale(28), JBUI.scale(28))
+
+        val newSessionButton = JButton(com.intellij.icons.AllIcons.General.Add).apply {
+            toolTipText = "New Session"
+            maximumSize = buttonSize
+            preferredSize = buttonSize
+            alignmentX = CENTER_ALIGNMENT
             isFocusPainted = false
+            isBorderPainted = false
+            isContentAreaFilled = false
+            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            font = font.deriveFont(Font.BOLD, 14f)
             addActionListener { onNewSession() }
         }
 
-        val historyButton = JButton("\u29D6").apply {
+        val historyButton = JButton(com.intellij.icons.AllIcons.Vcs.History).apply {
             toolTipText = "Session History"
-            preferredSize = Dimension(JBUI.scale(28), JBUI.scale(28))
-            font = font.deriveFont(Font.PLAIN, 11f)
+            maximumSize = buttonSize
+            preferredSize = buttonSize
+            alignmentX = CENTER_ALIGNMENT
             isFocusPainted = false
+            isBorderPainted = false
+            isContentAreaFilled = false
+            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            font = font.deriveFont(Font.PLAIN, 12f)
             addActionListener { showHistoryDialog() }
         }
 
-        toolbar.add(newSessionButton)
-        toolbar.add(historyButton)
+        collapseButton = JButton(com.intellij.icons.AllIcons.Actions.ArrowCollapse).apply {
+            toolTipText = "Toggle Sessions Panel"
+            maximumSize = buttonSize
+            preferredSize = buttonSize
+            alignmentX = CENTER_ALIGNMENT
+            isFocusPainted = false
+            isBorderPainted = false
+            isContentAreaFilled = false
+            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            font = font.deriveFont(Font.PLAIN, 10f)
+            addActionListener { toggleCollapse() }
+        }
 
-        return toolbar
+        strip.add(Box.createVerticalStrut(JBUI.scale(4)))
+        strip.add(newSessionButton)
+        strip.add(Box.createVerticalStrut(JBUI.scale(2)))
+        strip.add(historyButton)
+        strip.add(Box.createVerticalStrut(JBUI.scale(2)))
+        strip.add(collapseButton)
+        strip.add(Box.createVerticalGlue())
+
+        return strip
+    }
+
+    private fun toggleCollapse() {
+        isCollapsed = !isCollapsed
+        sessionListPanel.isVisible = !isCollapsed
+        collapseButton.icon = if (isCollapsed) com.intellij.icons.AllIcons.Actions.ArrowExpand else com.intellij.icons.AllIcons.Actions.ArrowCollapse
+        collapseButton.toolTipText = if (isCollapsed) "Show Sessions Panel" else "Hide Sessions Panel"
+        revalidate()
+        repaint()
     }
 
     private fun createSessionList(): JComponent {
@@ -99,12 +153,34 @@ class SessionSidebarPanel(
                 override fun mouseClicked(e: MouseEvent) {
                     handleSessionListMouseClicked(e)
                 }
+                override fun mousePressed(e: MouseEvent) {
+                    if (e.isPopupTrigger) showSessionContextMenu(e)
+                }
+                override fun mouseReleased(e: MouseEvent) {
+                    if (e.isPopupTrigger) showSessionContextMenu(e)
+                }
             })
         }
 
         return JBScrollPane(sessionList).apply {
             border = JBUI.Borders.empty()
         }
+    }
+
+    private fun showSessionContextMenu(e: MouseEvent) {
+        val index = sessionList.locationToIndex(e.point)
+        if (index < 0) return
+        val cellBounds = sessionList.getCellBounds(index, index)
+        if (cellBounds == null || !cellBounds.contains(e.point)) return
+
+        sessionList.selectedIndex = index
+        val session = sessionListModel.getElementAt(index)
+
+        val menu = JPopupMenu()
+        val closeItem = JMenuItem("Close Session", com.intellij.icons.AllIcons.Actions.Close)
+        closeItem.addActionListener { onSessionClosed(session) }
+        menu.add(closeItem)
+        menu.show(sessionList, e.x, e.y)
     }
 
     private fun handleSessionListMouseClicked(e: MouseEvent) {
@@ -121,7 +197,7 @@ class SessionSidebarPanel(
         if (index < 0) return
         val cellBounds = sessionList.getCellBounds(index, index)
         val relativeX = e.x - cellBounds.x
-        val closeButtonX = cellBounds.width - JBUI.scale(24)
+        val closeButtonX = cellBounds.width - JBUI.scale(28)
         if (relativeX >= closeButtonX) {
             onSessionClosed(sessionListModel.getElementAt(index))
         }
@@ -175,6 +251,8 @@ class SessionSidebarPanel(
     }
 
     private class SessionListCellRenderer : ListCellRenderer<ClaudeCodeSession> {
+        private val closeIconSize = JBUI.scale(20)
+
         override fun getListCellRendererComponent(
             list: JList<out ClaudeCodeSession>,
             value: ClaudeCodeSession,
@@ -182,36 +260,35 @@ class SessionSidebarPanel(
             isSelected: Boolean,
             cellHasFocus: Boolean
         ): Component {
-            return JPanel(BorderLayout()).apply {
-                border = JBUI.Borders.empty(4, 8)
-                background = if (isSelected) {
-                    list.selectionBackground
-                } else {
-                    list.background
+            return JPanel(BorderLayout(JBUI.scale(2), 0)).apply {
+                border = JBUI.Borders.empty(4, 6, 4, 4)
+                background = if (isSelected) list.selectionBackground else list.background
+
+                val nameLabel = JLabel(value.displayName).apply {
+                    foreground = if (isSelected) list.selectionForeground else list.foreground
+                    font = font.deriveFont(Font.PLAIN, 12f)
+                }
+
+                val timeLabel = JLabel(value.formattedTime).apply {
+                    foreground = JBColor.GRAY
+                    font = font.deriveFont(Font.PLAIN, 10f)
                 }
 
                 val textPanel = JPanel(BorderLayout()).apply {
                     isOpaque = false
-
-                    val nameLabel = JLabel(value.displayName).apply {
-                        foreground = if (isSelected) list.selectionForeground else list.foreground
-                        font = font.deriveFont(Font.PLAIN, 12f)
-                    }
-
-                    val timeLabel = JLabel(value.formattedTime).apply {
-                        foreground = JBColor.GRAY
-                        font = font.deriveFont(Font.PLAIN, 10f)
-                    }
-
+                    // Constrain width so it never pushes the close button out
+                    minimumSize = Dimension(0, 0)
                     add(nameLabel, BorderLayout.CENTER)
                     add(timeLabel, BorderLayout.SOUTH)
                 }
 
-                val closeLabel = JLabel("\u2715").apply {
+                val closeLabel = JLabel(com.intellij.icons.AllIcons.Actions.Close).apply {
                     foreground = if (isSelected) list.selectionForeground else JBColor.GRAY
-                    font = font.deriveFont(Font.PLAIN, 11f)
-                    preferredSize = Dimension(JBUI.scale(20), JBUI.scale(20))
+                    preferredSize = Dimension(closeIconSize, closeIconSize)
+                    minimumSize = Dimension(closeIconSize, closeIconSize)
+                    maximumSize = Dimension(closeIconSize, closeIconSize)
                     horizontalAlignment = SwingConstants.CENTER
+                    verticalAlignment = SwingConstants.CENTER
                     toolTipText = "Close session"
                     cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
                 }
