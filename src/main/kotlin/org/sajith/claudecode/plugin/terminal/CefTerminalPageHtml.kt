@@ -232,11 +232,13 @@ $unicode11AddonJs
 
     // Intercept Shift+Enter: send newline so Claude Code CLI treats it
     // as a continuation line rather than submitting the input.
-    var shiftEnterPending = false;
+    // Some environments still emit a trailing Enter data event even when Shift+Enter
+    // is intercepted. Only suppress CR/LF for a very short window.
+    var suppressShiftEnterDataUntilMs = 0;
     term.attachCustomKeyEventHandler(function(e) {
         if (e.key === 'Enter' && e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
             if (e.type === 'keydown') {
-                shiftEnterPending = true;
+                suppressShiftEnterDataUntilMs = Date.now() + 250;
                 var seq = '\x1b[13;2u';
                 var base64 = btoa(seq);
                 $inputQueryJs
@@ -249,9 +251,13 @@ $unicode11AddonJs
 
     // Keyboard input: JS -> Java
     term.onData(function(data) {
-        if (shiftEnterPending) {
-            shiftEnterPending = false;
-            return;
+        if (suppressShiftEnterDataUntilMs > 0) {
+            if (Date.now() > suppressShiftEnterDataUntilMs) {
+                suppressShiftEnterDataUntilMs = 0;
+            } else if (data === '\r' || data === '\n' || data === '\r\n') {
+                suppressShiftEnterDataUntilMs = 0;
+                return;
+            }
         }
         try {
             var base64 = btoa(data);
