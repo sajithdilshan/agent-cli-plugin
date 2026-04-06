@@ -75,7 +75,7 @@ object ClaudeCodeHistoryReader {
                             timestamp = ts?.let { parseTimestamp(it) }
                         }
                     }
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     // Skip malformed lines
                 }
             }
@@ -140,11 +140,11 @@ object ClaudeCodeHistoryReader {
         return try {
             val instant = Instant.parse(ts)
             LocalDateTime.ofInstant(instant, ZoneId.systemDefault())
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             try {
                 val millis = ts.toLong()
                 LocalDateTime.ofInstant(Instant.ofEpochMilli(millis), ZoneId.systemDefault())
-            } catch (e2: Exception) {
+            } catch (_: Exception) {
                 null
             }
         }
