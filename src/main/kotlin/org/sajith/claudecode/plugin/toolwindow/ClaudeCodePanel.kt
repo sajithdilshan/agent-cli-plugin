@@ -25,6 +25,7 @@ class ClaudeCodePanel(
     private val terminalPanel = JPanel(terminalCardLayout)
     private val terminalPanels = mutableMapOf<String, CefTerminalPanel>()
     private val ptyBridges = mutableMapOf<String, PtyBridge>()
+    private var activeSessionId: String? = null
 
     private val sidebar = SessionSidebarPanel(
         project = project,
@@ -86,6 +87,12 @@ class ClaudeCodePanel(
         ptyBridges[session.id] = ptyBridge
         terminalPanel.add(cefPanel.component, session.id)
         sidebar.addSession(session)
+
+        // Disable resize on the previously active terminal, enable on the new one
+        activeSessionId?.let { terminalPanels[it]?.setResizeEnabled(false) }
+        activeSessionId = session.id
+        cefPanel.setResizeEnabled(true)
+
         terminalCardLayout.show(terminalPanel, session.id)
 
         ApplicationManager.getApplication().executeOnPooledThread {
@@ -110,6 +117,11 @@ class ClaudeCodePanel(
 
     private fun switchToSession(session: ClaudeCodeSession) {
         if (terminalPanels.containsKey(session.id)) {
+            // Disable resize on old active terminal, enable on new one
+            activeSessionId?.let { terminalPanels[it]?.setResizeEnabled(false) }
+            activeSessionId = session.id
+            terminalPanels[session.id]?.setResizeEnabled(true)
+
             terminalCardLayout.show(terminalPanel, session.id)
             sidebar.selectSession(session)
             terminalPanels[session.id]?.focus()
@@ -126,7 +138,12 @@ class ClaudeCodePanel(
             // Switch to another card before remove() so CardLayout.remove() does not call next() → reshape on the browser being torn down.
             val remainingId = terminalPanels.keys.firstOrNull()
             if (remainingId != null) {
+                activeSessionId?.let { terminalPanels[it]?.setResizeEnabled(false) }
+                activeSessionId = remainingId
+                terminalPanels[remainingId]?.setResizeEnabled(true)
                 terminalCardLayout.show(terminalPanel, remainingId)
+            } else {
+                activeSessionId = null
             }
 
             cefPanel.component.isVisible = false

@@ -11,8 +11,11 @@ import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.handler.CefDisplayHandlerAdapter
 import org.cef.handler.CefLoadHandlerAdapter
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import java.util.Base64
 import javax.swing.JComponent
+import javax.swing.Timer
 
 class CefTerminalPanel(
     parentDisposable: Disposable,
@@ -28,9 +31,14 @@ class CefTerminalPanel(
     private var isPageLoaded = false
     private val pendingWrites = mutableListOf<String>()
 
-    /** True if [focus] was requested before the xterm page finished loading. */
     @Volatile
     private var pendingFocus = false
+
+    @Volatile
+    private var resizeEnabledState = false
+
+    /** Swing timer to debounce componentResized events. */
+    private val resizeDebounceTimer = Timer(200) { onResizeSettled() }.apply { isRepeats = false }
 
     val component: JComponent get() = browser.component
 
@@ -73,6 +81,8 @@ class CefTerminalPanel(
                         pendingFocus = false
                         executeJsFocusTerminal()
                     }
+                    // Do initial fit after page load
+                    executeJs("window.fitAndRestore()")
                 }
             }
 
@@ -96,16 +106,37 @@ class CefTerminalPanel(
                         LOG.error("[ClaudeCode] JS: $message ($source:$line)")
                     org.cef.CefSettings.LogSeverity.LOGSEVERITY_WARNING ->
                         LOG.warn("[ClaudeCode] JS: $message ($source:$line)")
-                    else -> { /* debug/info/verbose from xterm — omit */ }
+                    else -> {
+                        if (message.startsWith("[ClaudeCode]")) {
+                            LOG.info("[ClaudeCode] JS: $message")
+                        }
+                    }
                 }
                 return false
             }
         }, browser.cefBrowser)
 
+        // Listen to Swing component resize — this fires when the IDE resizes the tool window.
+        // We debounce and only call JS once the resize gesture settles.
+        browser.component.addComponentListener(object : ComponentAdapter() {
+            override fun componentResized(e: ComponentEvent) {
+                val size = e.component.size
+                LOG.info("[ClaudeCode] componentResized: ${size.width}x${size.height} enabled=$resizeEnabledState loaded=$isPageLoaded")
+                if (!resizeEnabledState || !isPageLoaded) return
+                resizeDebounceTimer.restart()
+            }
+        })
+
         val html = buildTerminalHtml()
         browser.loadHTML(html)
 
         Disposer.register(parentDisposable, this)
+    }
+
+    private fun onResizeSettled() {
+        if (!isPageLoaded || !resizeEnabledState) return
+        LOG.info("[ClaudeCode] Swing resize settled, calling fitAndRestore")
+        executeJs("window.fitAndRestore()")
     }
 
     private fun buildTerminalHtml(): String {
@@ -157,6 +188,13 @@ class CefTerminalPanel(
         executeJs("window.setTerminalTheme('$escaped')")
     }
 
+    fun setResizeEnabled(enabled: Boolean) {
+        resizeEnabledState = enabled
+        if (!enabled) {
+            resizeDebounceTimer.stop()
+        }
+    }
+
     fun focus() {
         if (isPageLoaded) {
             executeJsFocusTerminal()
@@ -185,6 +223,7 @@ class CefTerminalPanel(
     }
 
     override fun dispose() {
+        resizeDebounceTimer.stop()
         Disposer.dispose(inputQuery)
         Disposer.dispose(resizeQuery)
         Disposer.dispose(browser)
