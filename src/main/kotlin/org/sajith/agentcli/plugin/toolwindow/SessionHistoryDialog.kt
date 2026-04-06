@@ -14,7 +14,7 @@ import javax.swing.*
 
 class SessionHistoryDialog(
     project: Project,
-    private val sessions: List<HistoricalSession>,
+    sessions: List<HistoricalSession>,
     private val onResume: (sessionId: String, title: String?) -> Unit
 ) : DialogWrapper(project, true) {
 

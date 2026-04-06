@@ -7,7 +7,6 @@ import java.io.File
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 object ClaudeCodeHistoryReader {
 

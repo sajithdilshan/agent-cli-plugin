@@ -5,7 +5,6 @@ import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
-import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.ui.awt.RelativePoint
 import org.sajith.agentcli.plugin.AgentType
@@ -297,10 +296,6 @@ class SessionSidebarPanel(
             sessionList.selectedIndex = index
             selectedSession = session
         }
-    }
-
-    companion object {
-        private val LOG = Logger.getInstance(SessionSidebarPanel::class.java)
     }
 
     private class SessionListCellRenderer : ListCellRenderer<AgentCliSession> {
