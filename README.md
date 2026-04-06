@@ -88,7 +88,7 @@ Platform version and IDE type (e.g. IntelliJ Community vs other IDEs) are contro
 
 ## Version
 
-Plugin version is **`0.1.0`** (see `gradle.properties` and `plugin.xml`).
+Plugin version is **`0.2.0`** (see `gradle.properties` and `plugin.xml`).
 
 ## License
 This project is licensed under the Apache License 2.0. This license includes a specific "Limitation of Liability" and "Disclaimer of Warranty" to protect the contributors of this project. See the LICENSE file for full details.
