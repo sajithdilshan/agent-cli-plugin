@@ -106,11 +106,7 @@ class CefTerminalPanel(
                         LOG.error("[ClaudeCode] JS: $message ($source:$line)")
                     org.cef.CefSettings.LogSeverity.LOGSEVERITY_WARNING ->
                         LOG.warn("[ClaudeCode] JS: $message ($source:$line)")
-                    else -> {
-                        if (message.startsWith("[ClaudeCode]")) {
-                            LOG.info("[ClaudeCode] JS: $message")
-                        }
-                    }
+                    else -> {}
                 }
                 return false
             }
@@ -120,8 +116,6 @@ class CefTerminalPanel(
         // We debounce and only call JS once the resize gesture settles.
         browser.component.addComponentListener(object : ComponentAdapter() {
             override fun componentResized(e: ComponentEvent) {
-                val size = e.component.size
-                LOG.info("[ClaudeCode] componentResized: ${size.width}x${size.height} enabled=$resizeEnabledState loaded=$isPageLoaded")
                 if (!resizeEnabledState || !isPageLoaded) return
                 resizeDebounceTimer.restart()
             }
@@ -135,7 +129,6 @@ class CefTerminalPanel(
 
     private fun onResizeSettled() {
         if (!isPageLoaded || !resizeEnabledState) return
-        LOG.info("[ClaudeCode] Swing resize settled, calling fitAndRestore")
         executeJs("window.fitAndRestore()")
     }
 

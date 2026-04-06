@@ -76,14 +76,13 @@ $unicode11AddonJs
 </script>
 <script>
 (function() {
-    console.log('[ClaudeCode] xterm.js init: starting');
     var Terminal = window.Terminal;
     var FitAddon = window.FitAddon;
     var WebLinksAddon = window.WebLinksAddon;
     var Unicode11Addon = window.Unicode11Addon;
 
-    if (!Terminal) { console.error('[ClaudeCode] xterm.js init: Terminal class not found!'); return; }
-    if (!FitAddon) { console.error('[ClaudeCode] xterm.js init: FitAddon not found!'); return; }
+    if (!Terminal) { console.error('Terminal class not found'); return; }
+    if (!FitAddon) { console.error('FitAddon not found'); return; }
 
     var term = new Terminal({
         cursorBlink: true,
@@ -106,10 +105,14 @@ $unicode11AddonJs
         term.unicode.activeVersion = '11';
     }
     term.open(document.getElementById('terminal'));
-    console.log('[ClaudeCode] xterm.js init: terminal opened in DOM');
 
     var lastCols = 0;
     var lastRows = 0;
+    // After a resize, Claude Code redraws the screen (CSI 2J + 3J + full repaint).
+    // We detect the redraw is done by debouncing: each PTY write resets a timer,
+    // and when no more writes arrive for 150ms the redraw is considered settled.
+    var postResizeScrollDeadline = 0;  // timestamp: ignore writes after this
+    var postResizeSettleTimer = null;   // debounce timer for write-settle detection
 
     // ── Window bridge functions called from Java ──────────────────
 
@@ -121,7 +124,15 @@ $unicode11AddonJs
             for (var i = 0; i < binary.length; i++) {
                 bytes[i] = binary.charCodeAt(i);
             }
-            term.write(bytes);
+            term.write(bytes, function() {
+                if (Date.now() < postResizeScrollDeadline) {
+                    if (postResizeSettleTimer) { clearTimeout(postResizeSettleTimer); }
+                    postResizeSettleTimer = setTimeout(function() {
+                        postResizeSettleTimer = null;
+                        term.scrollToBottom();
+                    }, 150);
+                }
+            });
         } catch(e) {
             console.error('writeTerminalData error:', e);
         }
@@ -178,15 +189,8 @@ $unicode11AddonJs
             ratio = (scrollHeight > 0) ? (scrollTop / scrollHeight) : 0;
         }
 
-        console.log('[ClaudeCode] fitAndRestore PRE: scrollTop=' + scrollTop
-            + ' scrollHeight=' + scrollHeight + ' clientHeight=' + clientHeight
-            + ' atBottom=' + atBottom + ' ratio=' + ratio.toFixed(4)
-            + ' isAlt=' + isAlt + ' cols=' + term.cols + ' rows=' + term.rows);
-
         // 2. Fit terminal to new container size
         fitAddon.fit();
-
-        console.log('[ClaudeCode] fitAndRestore POST: cols=' + term.cols + ' rows=' + term.rows);
 
         // 3. Restore scroll position
         if (viewport && !isAlt) {
@@ -203,13 +207,12 @@ $unicode11AddonJs
             }
 
             viewport.scrollTop = targetTop;
-            var actualScrollTop = viewport.scrollTop;
 
-            console.log('[ClaudeCode] fitAndRestore RESTORE: targetTop=' + targetTop
-                + ' actualScrollTop=' + actualScrollTop
-                + ' maxScroll=' + maxScroll + ' newScrollHeight=' + newScrollHeight
-                + ' newClientHeight=' + newClientHeight
-                + ' atBottom=' + atBottom + ' ratio=' + ratio.toFixed(4));
+            // Claude Code clears screen + scrollback after resize (CSI 2J + 3J),
+            // destroying scroll state. Detect when redraw is done by debouncing
+            // PTY writes — when no more arrive for 150ms, scrollToBottom once.
+            postResizeScrollDeadline = Date.now() + 3000;
+            if (postResizeSettleTimer) { clearTimeout(postResizeSettleTimer); postResizeSettleTimer = null; }
         }
 
         // 4. Notify Java of new terminal dimensions if changed
@@ -236,7 +239,6 @@ $unicode11AddonJs
                 shiftEnterPending = true;
                 var seq = '\x1b[13;2u';
                 var base64 = btoa(seq);
-                console.log('[ClaudeCode] Shift+Enter keydown intercepted, sending CSI u');
                 $inputQueryJs
             }
             // Block both keydown AND keyup for Shift+Enter
@@ -247,12 +249,8 @@ $unicode11AddonJs
 
     // Keyboard input: JS -> Java
     term.onData(function(data) {
-        // If Shift+Enter was just handled, suppress the \r that xterm may still emit
         if (shiftEnterPending) {
             shiftEnterPending = false;
-            var hex = [];
-            for (var i = 0; i < data.length; i++) hex.push(data.charCodeAt(i).toString(16).padStart(2, '0'));
-            console.log('[ClaudeCode] onData after Shift+Enter suppressed: hex=[' + hex.join(' ') + ']');
             return;
         }
         try {

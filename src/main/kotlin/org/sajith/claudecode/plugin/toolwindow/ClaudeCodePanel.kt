@@ -133,17 +133,28 @@ class ClaudeCodePanel(
     private fun closeSession(session: ClaudeCodeSession) {
         val cefPanel = terminalPanels.remove(session.id)
         val ptyBridge = ptyBridges.remove(session.id)
+        val closedActiveSession = session.id == activeSessionId
 
         if (cefPanel != null) {
-            // Switch to another card before remove() so CardLayout.remove() does not call next() → reshape on the browser being torn down.
-            val remainingId = terminalPanels.keys.firstOrNull()
-            if (remainingId != null) {
-                activeSessionId?.let { terminalPanels[it]?.setResizeEnabled(false) }
-                activeSessionId = remainingId
-                terminalPanels[remainingId]?.setResizeEnabled(true)
-                terminalCardLayout.show(terminalPanel, remainingId)
+            // Stop debounced resize → fitAndRestore on this panel before dispose. Cannot use
+            // terminalPanels[activeSessionId] here — the closing session was already removed from the map.
+            cefPanel.setResizeEnabled(false)
+
+            // CardLayout: show a different card before remove() so removing a card does not reshuffle the visible panel.
+            if (closedActiveSession) {
+                val remainingId = terminalPanels.keys.firstOrNull()
+                if (remainingId != null) {
+                    activeSessionId = remainingId
+                    terminalPanels[remainingId]?.setResizeEnabled(true)
+                    terminalCardLayout.show(terminalPanel, remainingId)
+                } else {
+                    activeSessionId = null
+                }
             } else {
-                activeSessionId = null
+                // Closing a background tab: keep the current session visible and resize handling unchanged.
+                activeSessionId?.let { id ->
+                    terminalCardLayout.show(terminalPanel, id)
+                }
             }
 
             cefPanel.component.isVisible = false
@@ -161,6 +172,11 @@ class ClaudeCodePanel(
 
         sessionManager.removeSession(session)
         sidebar.removeSession(session)
+
+        // removeSession() selects the last list row; align selection with the visible terminal card.
+        activeSessionId?.let { id ->
+            sessionManager.sessions.find { it.id == id }?.let { sidebar.selectSession(it) }
+        }
     }
 
     companion object {

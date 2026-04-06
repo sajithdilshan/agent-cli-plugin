@@ -44,7 +44,8 @@ class PtyBridge(
                         break
                     }
                     totalBytesRead += bytesRead
-                    onOutput(buffer.copyOf(bytesRead))
+                    val chunk = buffer.copyOf(bytesRead)
+                    onOutput(chunk)
                 }
             } catch (e: Exception) {
                 if (!isDisposed.get()) {
