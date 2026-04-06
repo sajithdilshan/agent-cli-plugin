@@ -16,6 +16,7 @@ class AgentCliSettings : PersistentStateComponent<AgentCliSettings.State> {
     data class State(
         var claudeCommand: String = "claude",
         var cursorCommand: String = "agent",
+        var geminiCommand: String = "gemini",
         var terminalFontSize: Int = 13
     )
 
@@ -34,6 +35,10 @@ class AgentCliSettings : PersistentStateComponent<AgentCliSettings.State> {
     var cursorCommand: String
         get() = state.cursorCommand
         set(value) { state.cursorCommand = value }
+
+    var geminiCommand: String
+        get() = state.geminiCommand
+        set(value) { state.geminiCommand = value }
 
     var terminalFontSize: Int
         get() = state.terminalFontSize

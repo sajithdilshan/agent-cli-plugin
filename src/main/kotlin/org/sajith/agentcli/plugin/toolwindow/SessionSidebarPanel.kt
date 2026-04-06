@@ -11,6 +11,7 @@ import org.sajith.agentcli.plugin.AgentType
 import org.sajith.agentcli.plugin.session.ClaudeCodeHistoryReader
 import org.sajith.agentcli.plugin.session.AgentCliSession
 import org.sajith.agentcli.plugin.session.CursorHistoryReader
+import org.sajith.agentcli.plugin.session.GeminiHistoryReader
 import org.sajith.agentcli.plugin.session.SessionManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
@@ -257,6 +258,7 @@ class SessionSidebarPanel(
             val history = when (agentType) {
                 AgentType.CLAUDE -> ClaudeCodeHistoryReader.readHistory(projectPath)
                 AgentType.CURSOR -> CursorHistoryReader.readHistory(projectPath)
+                AgentType.GEMINI -> GeminiHistoryReader.readHistory(projectPath)
             }.filter { it.sessionId !in openIds }
 
             SwingUtilities.invokeLater {

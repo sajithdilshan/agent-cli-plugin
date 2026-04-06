@@ -30,6 +30,14 @@ class AgentCliSettingsConfigurable : BoundSearchableConfigurable(
                     .comment("The CLI command to launch Cursor Agent (e.g. cursor-agent)")
             }
         }
+        group("Gemini CLI") {
+            row("Gemini command:") {
+                textField()
+                    .columns(20)
+                    .bindText(settings::geminiCommand)
+                    .comment("The CLI command to launch Gemini CLI (e.g. gemini)")
+            }
+        }
         group("Terminal") {
             row("Font size:") {
                 intTextField(8..32)

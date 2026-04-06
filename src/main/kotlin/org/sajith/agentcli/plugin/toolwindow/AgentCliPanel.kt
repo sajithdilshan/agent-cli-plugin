@@ -64,6 +64,7 @@ class AgentCliPanel(
         return when (agentType) {
             AgentType.CLAUDE -> settings.claudeCommand
             AgentType.CURSOR -> settings.cursorCommand
+            AgentType.GEMINI -> settings.geminiCommand
         }
     }
 
