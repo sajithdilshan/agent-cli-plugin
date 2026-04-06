@@ -23,3 +23,4 @@ Thumbs.db
 # Local machine-only config (if present)
 local.properties
 .claude/settings.local.json
+.intellijPlatform/

@@ -26,7 +26,7 @@ No Warranty: This software is provided "as is," without warranty of any kind. Us
 
 ## Requirements
 
-- **IDE build** — compatible range is defined in `build.gradle.kts` (`sinceBuild` / `untilBuild`; currently **241–262.\***).
+- **IDE build** — compatible range is defined in `build.gradle.kts` (`sinceBuild` / `untilBuild`; currently **261–263.\***).
 - **JCEF** — the embedded terminal needs a **JetBrains Runtime (JBR) with JCEF**. If JCEF is unavailable, the tool window shows a short fallback message instead of the terminal.
 - **Agent CLI(s)** — install and authenticate the agent(s) you want to use:
   - [Claude Code](https://www.anthropic.com/claude-code) (default command: `claude`)

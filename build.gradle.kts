@@ -2,16 +2,12 @@ import java.util.Properties
 
 plugins {
     id("java")
-    id("org.jetbrains.kotlin.jvm") version "1.9.25"
-    id("org.jetbrains.intellij") version "1.17.4"
+    id("org.jetbrains.kotlin.jvm") version "2.3.20"
+    id("org.jetbrains.intellij.platform") version "2.13.1"
 }
 
 group = providers.gradleProperty("pluginGroup").get()
 version = providers.gradleProperty("pluginVersion").get()
-
-repositories {
-    mavenCentral()
-}
 
 /** Machine-local defaults (gitignored); see https://plugins.jetbrains.com/docs/intellij/plugin-signing.html */
 val localProperties = Properties().apply {
@@ -34,27 +30,36 @@ fun signingPrivateKeyPassword(): String? =
         ?: localProperties.getProperty("pluginSigning.privateKeyPassword")
         ?: findProperty("pluginSigning.privateKeyPassword") as String?
 
-intellij {
-    version.set(providers.gradleProperty("platformVersion"))
-    type.set(providers.gradleProperty("platformType"))
-    plugins.set(emptyList())
+repositories {
+    mavenCentral()
+    intellijPlatform {
+        defaultRepositories()
+    }
+}
+
+dependencies {
+    intellijPlatform {
+        intellijIdea(providers.gradleProperty("platformVersion"))
+    }
 }
 
 kotlin {
     jvmToolchain(17)
 }
 
-tasks {
-    patchPluginXml {
-        sinceBuild.set("241")
-        untilBuild.set("262.*")
+intellijPlatform {
+    buildSearchableOptions = false
+
+    pluginConfiguration {
+        name = providers.gradleProperty("pluginName")
+        version = providers.gradleProperty("pluginVersion")
+        ideaVersion {
+            sinceBuild = providers.gradleProperty("pluginSinceBuild")
+            untilBuild = providers.gradleProperty("pluginUntilBuild")
+        }
     }
 
-    buildSearchableOptions {
-        enabled = false
-    }
-
-    signPlugin {
+    signing {
         val chain = signingCertificateChainFile()
         val key = signingPrivateKeyFile()
         if (chain != null && key != null) {
