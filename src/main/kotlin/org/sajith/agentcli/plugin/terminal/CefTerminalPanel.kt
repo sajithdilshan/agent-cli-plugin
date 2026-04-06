@@ -161,18 +161,13 @@ class CefTerminalPanel(
 
     private fun buildFontFaceCss(): String {
         val regularBase64 = readResourceBase64("/fonts/InconsolataNerdFontMono-Regular.ttf")
-        val boldBase64 = readResourceBase64("/fonts/InconsolataNerdFontMono-Bold.ttf")
+        // Use the regular font for both normal and bold weights to keep glyph widths
+        // identical across the monospace grid. The browser synthesizes faux-bold.
         return """
 @font-face {
     font-family: 'Inconsolata Nerd Font Mono';
     src: url(data:font/truetype;base64,$regularBase64) format('truetype');
-    font-weight: normal;
-    font-style: normal;
-}
-@font-face {
-    font-family: 'Inconsolata Nerd Font Mono';
-    src: url(data:font/truetype;base64,$boldBase64) format('truetype');
-    font-weight: bold;
+    font-weight: 1 999;
     font-style: normal;
 }
         """.trim()
