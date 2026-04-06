@@ -1,12 +1,12 @@
 <idea-plugin>
-    <id>org.sajith.claudecode.plugin</id>
-    <name>Claude Code</name>
+    <id>org.sajith.agentcli.plugin</id>
+    <name>Agent CLI</name>
     <version>0.1.0</version>
-    <vendor>Claude Code</vendor>
+    <vendor>org.sajith</vendor>
 
     <description><![CDATA[
-    Integrates Claude Code CLI sessions directly into your IDE.
-    Open multiple Claude Code terminal sessions, switch between them, and browse session history.
+    Integrates AI Agent CLI sessions directly into your IDE.
+    Open multiple Claude Code, Cursor, Gemini, etc. terminal sessions, switch between them, and browse session history.
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
@@ -15,16 +15,16 @@
         <toolWindow id="Claude Code"
                     anchor="bottom"
                     secondary="false"
-                    factoryClass="org.sajith.agentcli.plugin.toolwindow.ClaudeCodeToolWindowFactory"
-                    icon="/icons/claude-code.svg"/>
+                    factoryClass="org.sajith.agentcli.plugin.toolwindow.AgentCliToolWindowFactory"
+                    icon="/icons/agent-cli.svg"/>
 
         <applicationConfigurable
-                id="org.sajith.claudecode.plugin.settings"
+                id="org.sajith.agentcli.plugin.settings"
                 groupId="tools"
-                displayName="Claude Code Plugin"
-                instance="org.sajith.agentcli.plugin.settings.ClaudeCodeSettingsConfigurable"/>
+                displayName="Agent CLI"
+                instance="org.sajith.agentcli.plugin.settings.AgentCliSettingsConfigurable"/>
 
         <applicationService
-                serviceImplementation="org.sajith.agentcli.plugin.settings.ClaudeCodeSettings"/>
+                serviceImplementation="org.sajith.agentcli.plugin.settings.AgentCliSettings"/>
     </extensions>
 </idea-plugin>

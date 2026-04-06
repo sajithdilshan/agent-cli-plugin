@@ -2,33 +2,41 @@ package org.sajith.agentcli.plugin.session
 
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
+import org.sajith.agentcli.plugin.AgentType
 
 @Service(Service.Level.PROJECT)
 class SessionManager {
-    private val activeSessions = mutableListOf<ClaudeCodeSession>()
-    private val resumedClaudeSessionIds = mutableSetOf<String>()
+    private val activeSessions = mutableListOf<AgentCliSession>()
+    private val openSessionIds = mutableMapOf<AgentType, MutableSet<String>>()
     private var sessionCounter = 0
 
-    val sessions: List<ClaudeCodeSession> get() = activeSessions.toList()
-    val openClaudeSessionIds: Set<String> get() = resumedClaudeSessionIds.toSet()
+    val sessions: List<AgentCliSession> get() = activeSessions.toList()
 
-    fun createSession(name: String? = null, claudeSessionId: String? = null): ClaudeCodeSession {
+    fun getOpenSessionIds(agentType: AgentType): Set<String> =
+        openSessionIds[agentType]?.toSet() ?: emptySet()
+
+    fun createSession(
+        name: String? = null,
+        agentType: AgentType = AgentType.CLAUDE,
+        agentSessionId: String? = null
+    ): AgentCliSession {
         sessionCounter++
-        val session = ClaudeCodeSession(
+        val session = AgentCliSession(
             name = name ?: "Session $sessionCounter",
-            claudeSessionId = claudeSessionId
+            agentType = agentType,
+            agentSessionId = agentSessionId
         )
-        if (claudeSessionId != null) {
-            resumedClaudeSessionIds.add(claudeSessionId)
+        if (agentSessionId != null) {
+            openSessionIds.getOrPut(agentType) { mutableSetOf() }.add(agentSessionId)
         }
         activeSessions.add(session)
         return session
     }
 
-    fun removeSession(session: ClaudeCodeSession) {
+    fun removeSession(session: AgentCliSession) {
         session.isActive = false
         activeSessions.remove(session)
-        session.claudeSessionId?.let { resumedClaudeSessionIds.remove(it) }
+        session.agentSessionId?.let { openSessionIds[session.agentType]?.remove(it) }
     }
 
     companion object {

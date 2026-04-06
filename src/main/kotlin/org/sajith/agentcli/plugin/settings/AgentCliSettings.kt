@@ -11,10 +11,11 @@ import com.intellij.openapi.components.Storage
     name = "ClaudeCodeSettings",
     storages = [Storage("claudeCodePlugin.xml")]
 )
-class ClaudeCodeSettings : PersistentStateComponent<ClaudeCodeSettings.State> {
+class AgentCliSettings : PersistentStateComponent<AgentCliSettings.State> {
 
     data class State(
-        var claudeCommand: String = "cc",
+        var claudeCommand: String = "claude",
+        var cursorCommand: String = "agent",
         var terminalFontSize: Int = 13
     )
 
@@ -30,12 +31,16 @@ class ClaudeCodeSettings : PersistentStateComponent<ClaudeCodeSettings.State> {
         get() = state.claudeCommand
         set(value) { state.claudeCommand = value }
 
+    var cursorCommand: String
+        get() = state.cursorCommand
+        set(value) { state.cursorCommand = value }
+
     var terminalFontSize: Int
         get() = state.terminalFontSize
         set(value) { state.terminalFontSize = value }
 
     companion object {
-        fun getInstance(): ClaudeCodeSettings =
-            ApplicationManager.getApplication().getService(ClaudeCodeSettings::class.java)
+        fun getInstance(): AgentCliSettings =
+            ApplicationManager.getApplication().getService(AgentCliSettings::class.java)
     }
 }

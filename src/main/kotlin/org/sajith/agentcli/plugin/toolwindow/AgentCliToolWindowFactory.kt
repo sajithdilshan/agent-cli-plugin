@@ -10,7 +10,7 @@ import com.intellij.ui.content.ContentFactory
 import javax.swing.JLabel
 import javax.swing.SwingConstants
 
-class ClaudeCodeToolWindowFactory : ToolWindowFactory, DumbAware {
+class AgentCliToolWindowFactory : ToolWindowFactory, DumbAware {
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         if (!JBCefApp.isSupported()) {
@@ -25,7 +25,7 @@ class ClaudeCodeToolWindowFactory : ToolWindowFactory, DumbAware {
             return
         }
 
-        val panel = ClaudeCodePanel(project, toolWindow.disposable)
+        val panel = AgentCliPanel(project, toolWindow.disposable)
         val content = ContentFactory.getInstance().createContent(panel, "", false)
         toolWindow.contentManager.addContent(content)
 
@@ -33,6 +33,6 @@ class ClaudeCodeToolWindowFactory : ToolWindowFactory, DumbAware {
     }
 
     companion object {
-        private val LOG = Logger.getInstance(ClaudeCodeToolWindowFactory::class.java)
+        private val LOG = Logger.getInstance(AgentCliToolWindowFactory::class.java)
     }
 }

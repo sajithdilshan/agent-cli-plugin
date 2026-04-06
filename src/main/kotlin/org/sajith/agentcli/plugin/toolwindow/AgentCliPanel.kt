@@ -6,16 +6,17 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
-import org.sajith.agentcli.plugin.session.ClaudeCodeSession
+import org.sajith.agentcli.plugin.AgentType
+import org.sajith.agentcli.plugin.session.AgentCliSession
 import org.sajith.agentcli.plugin.session.SessionManager
-import org.sajith.agentcli.plugin.settings.ClaudeCodeSettings
+import org.sajith.agentcli.plugin.settings.AgentCliSettings
 import org.sajith.agentcli.plugin.terminal.CefTerminalPanel
 import org.sajith.agentcli.plugin.terminal.PtyBridge
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import javax.swing.JPanel
 
-class ClaudeCodePanel(
+class AgentCliPanel(
     private val project: Project,
     private val parentDisposable: Disposable
 ) : JPanel(BorderLayout()) {
@@ -29,10 +30,10 @@ class ClaudeCodePanel(
 
     private val sidebar = SessionSidebarPanel(
         project = project,
-        onNewSession = { createNewSession() },
+        onNewSession = { agentType -> createNewSession(agentType) },
         onSessionSelected = { session -> switchToSession(session) },
         onSessionClosed = { session -> closeSession(session) },
-        onResumeSession = { sessionId, title -> resumeSession(sessionId, title) }
+        onResumeSession = { agentType, sessionId, title -> resumeSession(agentType, sessionId, title) }
     )
 
     init {
@@ -46,19 +47,27 @@ class ClaudeCodePanel(
             })
     }
 
-    fun createNewSession() {
-        val cmd = ClaudeCodeSettings.getInstance().claudeCommand
-        val session = sessionManager.createSession()
+    fun createNewSession(agentType: AgentType = AgentType.CLAUDE) {
+        val cmd = getCommand(agentType)
+        val session = sessionManager.createSession(agentType = agentType)
         createTerminalForSession(session, cmd)
     }
 
-    private fun resumeSession(sessionId: String, title: String?) {
-        val cmd = ClaudeCodeSettings.getInstance().claudeCommand
-        val session = sessionManager.createSession(title, claudeSessionId = sessionId)
+    private fun resumeSession(agentType: AgentType, sessionId: String, title: String?) {
+        val cmd = getCommand(agentType)
+        val session = sessionManager.createSession(title, agentType = agentType, agentSessionId = sessionId)
         createTerminalForSession(session, "$cmd --resume $sessionId")
     }
 
-    private fun createTerminalForSession(session: ClaudeCodeSession, command: String) {
+    private fun getCommand(agentType: AgentType): String {
+        val settings = AgentCliSettings.getInstance()
+        return when (agentType) {
+            AgentType.CLAUDE -> settings.claudeCommand
+            AgentType.CURSOR -> settings.cursorCommand
+        }
+    }
+
+    private fun createTerminalForSession(session: AgentCliSession, command: String) {
         val workingDir = project.basePath ?: System.getProperty("user.home")
 
         lateinit var ptyBridge: PtyBridge
@@ -115,7 +124,7 @@ class ClaudeCodePanel(
         }
     }
 
-    private fun switchToSession(session: ClaudeCodeSession) {
+    private fun switchToSession(session: AgentCliSession) {
         if (terminalPanels.containsKey(session.id)) {
             // Disable resize on old active terminal, enable on new one
             activeSessionId?.let { terminalPanels[it]?.setResizeEnabled(false) }
@@ -130,7 +139,7 @@ class ClaudeCodePanel(
         }
     }
 
-    private fun closeSession(session: ClaudeCodeSession) {
+    private fun closeSession(session: AgentCliSession) {
         val cefPanel = terminalPanels.remove(session.id)
         val ptyBridge = ptyBridges.remove(session.id)
         val closedActiveSession = session.id == activeSessionId
@@ -180,6 +189,6 @@ class ClaudeCodePanel(
     }
 
     companion object {
-        private val LOG = Logger.getInstance(ClaudeCodePanel::class.java)
+        private val LOG = Logger.getInstance(AgentCliPanel::class.java)
     }
 }

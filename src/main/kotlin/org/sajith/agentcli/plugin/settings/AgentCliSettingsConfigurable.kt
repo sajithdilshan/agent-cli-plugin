@@ -6,12 +6,12 @@ import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.columns
 import com.intellij.ui.dsl.builder.panel
 
-class ClaudeCodeSettingsConfigurable : BoundSearchableConfigurable(
-    "Claude Code Plugin",
-    "org.sajith.claudecode.plugin.settings"
+class AgentCliSettingsConfigurable : BoundSearchableConfigurable(
+    "Agent CLI",
+    "org.sajith.agentcli.plugin.settings"
 ) {
 
-    private val settings = ClaudeCodeSettings.getInstance()
+    private val settings = AgentCliSettings.getInstance()
 
     override fun createPanel() = panel {
         group("Claude Code") {
@@ -20,6 +20,14 @@ class ClaudeCodeSettingsConfigurable : BoundSearchableConfigurable(
                     .columns(20)
                     .bindText(settings::claudeCommand)
                     .comment("The CLI command to launch Claude Code (e.g. cc, claude)")
+            }
+        }
+        group("Cursor Agent") {
+            row("Cursor command:") {
+                textField()
+                    .columns(20)
+                    .bindText(settings::cursorCommand)
+                    .comment("The CLI command to launch Cursor Agent (e.g. cursor-agent)")
             }
         }
         group("Terminal") {

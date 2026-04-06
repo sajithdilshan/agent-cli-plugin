@@ -25,7 +25,7 @@ class SessionHistoryDialog(
         private set
 
     init {
-        title = "Claude Code Session History"
+        title = "Session History"
         setOKButtonText("Resume")
         sessions.forEach { listModel.addElement(it) }
         init()

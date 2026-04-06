@@ -1,8 +1,17 @@
 package org.sajith.agentcli.plugin.toolwindow
 
 import com.intellij.icons.AllIcons
+import com.intellij.ide.DataManager
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.ui.popup.JBPopupFactory
+import com.intellij.ui.awt.RelativePoint
+import org.sajith.agentcli.plugin.AgentType
 import org.sajith.agentcli.plugin.session.ClaudeCodeHistoryReader
-import org.sajith.agentcli.plugin.session.ClaudeCodeSession
+import org.sajith.agentcli.plugin.session.AgentCliSession
+import org.sajith.agentcli.plugin.session.CursorHistoryReader
 import org.sajith.agentcli.plugin.session.SessionManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
@@ -24,10 +33,8 @@ import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JList
-import javax.swing.JMenuItem
 import javax.swing.JOptionPane
 import javax.swing.JPanel
-import javax.swing.JPopupMenu
 import javax.swing.ListCellRenderer
 import javax.swing.ListSelectionModel
 import javax.swing.SwingConstants
@@ -36,15 +43,15 @@ import javax.swing.border.MatteBorder
 
 class SessionSidebarPanel(
     private val project: Project,
-    private val onNewSession: () -> Unit,
-    private val onSessionSelected: (ClaudeCodeSession) -> Unit,
-    private val onSessionClosed: (ClaudeCodeSession) -> Unit,
-    private val onResumeSession: (sessionId: String, title: String?) -> Unit
+    private val onNewSession: (agentType: AgentType) -> Unit,
+    private val onSessionSelected: (AgentCliSession) -> Unit,
+    private val onSessionClosed: (AgentCliSession) -> Unit,
+    private val onResumeSession: (agentType: AgentType, sessionId: String, title: String?) -> Unit
 ) : JPanel(BorderLayout()) {
 
-    private val sessionListModel = DefaultListModel<ClaudeCodeSession>()
+    private val sessionListModel = DefaultListModel<AgentCliSession>()
     private val sessionList = JBList(sessionListModel)
-    private var selectedSession: ClaudeCodeSession? = null
+    private var selectedSession: AgentCliSession? = null
 
     private val sessionListPanel: JPanel
     private lateinit var collapseButton: JButton
@@ -88,7 +95,23 @@ class SessionSidebarPanel(
             isContentAreaFilled = false
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             font = font.deriveFont(Font.BOLD, 14f)
-            addActionListener { onNewSession() }
+            addActionListener { e ->
+                val button = e.source as JButton
+                val group = DefaultActionGroup().apply {
+                    AgentType.entries.forEach { agentType ->
+                        add(object : AnAction(agentType.displayName, "New ${agentType.displayName} session", null) {
+                            override fun actionPerformed(e: AnActionEvent) {
+                                onNewSession(agentType)
+                            }
+                        })
+                    }
+                }
+                val popup = JBPopupFactory.getInstance().createActionGroupPopup(
+                    null, group, DataManager.getInstance().getDataContext(button),
+                    JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, false
+                )
+                popup.showUnderneathOf(button)
+            }
         }
 
         val historyButton = JButton(AllIcons.Vcs.History).apply {
@@ -101,7 +124,23 @@ class SessionSidebarPanel(
             isContentAreaFilled = false
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             font = font.deriveFont(Font.PLAIN, 12f)
-            addActionListener { showHistoryDialog() }
+            addActionListener { e ->
+                val button = e.source as JButton
+                val group = DefaultActionGroup().apply {
+                    AgentType.entries.forEach { agentType ->
+                        add(object : AnAction(agentType.displayName, "Show ${agentType.displayName} history", null) {
+                            override fun actionPerformed(e: AnActionEvent) {
+                                showHistoryDialog(agentType)
+                            }
+                        })
+                    }
+                }
+                val popup = JBPopupFactory.getInstance().createActionGroupPopup(
+                    null, group, DataManager.getInstance().getDataContext(button),
+                    JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, false
+                )
+                popup.showUnderneathOf(button)
+            }
         }
 
         collapseButton = JButton(AllIcons.Actions.ArrowCollapse).apply {
@@ -177,11 +216,18 @@ class SessionSidebarPanel(
         sessionList.selectedIndex = index
         val session = sessionListModel.getElementAt(index)
 
-        val menu = JPopupMenu()
-        val closeItem = JMenuItem("Close Session", AllIcons.Actions.Close)
-        closeItem.addActionListener { onSessionClosed(session) }
-        menu.add(closeItem)
-        menu.show(sessionList, e.x, e.y)
+        val group = DefaultActionGroup().apply {
+            add(object : AnAction("Close Session", "Close this session", AllIcons.Actions.Close) {
+                override fun actionPerformed(e: AnActionEvent) {
+                    onSessionClosed(session)
+                }
+            })
+        }
+        val popup = JBPopupFactory.getInstance().createActionGroupPopup(
+            null, group, DataManager.getInstance().getDataContext(sessionList),
+            JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, false
+        )
+        popup.show(RelativePoint(e))
     }
 
     private fun handleSessionListMouseClicked(e: MouseEvent) {
@@ -204,19 +250,21 @@ class SessionSidebarPanel(
         }
     }
 
-    private fun showHistoryDialog() {
+    private fun showHistoryDialog(agentType: AgentType) {
         val projectPath = project.basePath ?: return
 
         ApplicationManager.getApplication().executeOnPooledThread {
-            val openIds = SessionManager.getInstance(project).openClaudeSessionIds
-            val history = ClaudeCodeHistoryReader.readHistory(projectPath)
-                .filter { it.sessionId !in openIds }
+            val openIds = SessionManager.getInstance(project).getOpenSessionIds(agentType)
+            val history = when (agentType) {
+                AgentType.CLAUDE -> ClaudeCodeHistoryReader.readHistory(projectPath)
+                AgentType.CURSOR -> CursorHistoryReader.readHistory(projectPath)
+            }.filter { it.sessionId !in openIds }
 
             SwingUtilities.invokeLater {
                 if (history.isEmpty()) {
                     JOptionPane.showMessageDialog(
                         this,
-                        "No session history found for this project.",
+                        "No ${agentType.displayName} session history found for this project.",
                         "Session History",
                         JOptionPane.INFORMATION_MESSAGE
                     )
@@ -224,26 +272,26 @@ class SessionSidebarPanel(
                 }
 
                 SessionHistoryDialog(project, history) { sessionId, title ->
-                    onResumeSession(sessionId, title)
+                    onResumeSession(agentType, sessionId, title)
                 }.show()
             }
         }
     }
 
-    fun addSession(session: ClaudeCodeSession) {
+    fun addSession(session: AgentCliSession) {
         sessionListModel.addElement(session)
         sessionList.selectedIndex = sessionListModel.size() - 1
         selectedSession = session
     }
 
-    fun removeSession(session: ClaudeCodeSession) {
+    fun removeSession(session: AgentCliSession) {
         sessionListModel.removeElement(session)
         if (sessionListModel.size() > 0) {
             sessionList.selectedIndex = sessionListModel.size() - 1
         }
     }
 
-    fun selectSession(session: ClaudeCodeSession) {
+    fun selectSession(session: AgentCliSession) {
         val index = sessionListModel.indexOf(session)
         if (index >= 0) {
             sessionList.selectedIndex = index
@@ -251,12 +299,16 @@ class SessionSidebarPanel(
         }
     }
 
-    private class SessionListCellRenderer : ListCellRenderer<ClaudeCodeSession> {
+    companion object {
+        private val LOG = Logger.getInstance(SessionSidebarPanel::class.java)
+    }
+
+    private class SessionListCellRenderer : ListCellRenderer<AgentCliSession> {
         private val closeIconSize = JBUI.scale(20)
 
         override fun getListCellRendererComponent(
-            list: JList<out ClaudeCodeSession>,
-            value: ClaudeCodeSession,
+            list: JList<out AgentCliSession>,
+            value: AgentCliSession,
             index: Int,
             isSelected: Boolean,
             cellHasFocus: Boolean

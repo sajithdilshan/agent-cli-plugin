@@ -1,33 +1,43 @@
-# Claude Code (IntelliJ Platform plugin)
+# Agent CLI (IntelliJ Platform plugin)
 
-An [IntelliJ Platform](https://plugins.jetbrains.com/docs/intellij/welcome.html) plugin that runs **Claude Code** CLI sessions inside the IDE: a full **xterm.js** terminal in an embedded browser (**JCEF**), backed by a **PTY**, with a session sidebar and optional resume from local history.
+An [IntelliJ Platform](https://plugins.jetbrains.com/docs/intellij/welcome.html) plugin that runs **AI agent CLI** sessions inside the IDE: a full **xterm.js** terminal in an embedded browser (**JCEF**), backed by a **PTY**, with a session sidebar and optional resume from local history.
 
-This is an independent, personal-developed project. **Not Affiliated:** This plugin is not an official product of Anthropic PBC. It is not affiliated with, sponsored by, endorsed by, or in any way associated with Anthropic.
+Currently supported agents:
+- **Claude Code** — Anthropic's CLI coding agent
+- **Cursor** — Cursor's CLI agent
 
-Trademarks: "Claude," "Claude Code," and the Claude logo are registered trademarks of Anthropic PBC. These terms are used here solely for descriptive purposes to indicate compatibility and help users find relevant tools.
+This is an independent, personally-developed project.
 
-No Warranty: This software is provided "as is," without warranty of any kind. Use of this plugin is at your own risk. You are responsible for complying with [Claude / Claude Code](https://www.anthropic.com/claude-code) terms and brand guidelines.
+**Not Affiliated:** This plugin is not an official product of Anthropic PBC or Anysphere Inc. It is not affiliated with, sponsored by, endorsed by, or in any way associated with Anthropic or Anysphere.
+
+Trademarks: "Claude," "Claude Code," and the Claude logo are registered trademarks of Anthropic PBC. "Cursor" is a trademark of Anysphere Inc. These terms are used here solely for descriptive purposes to indicate compatibility and help users find relevant tools.
+
+No Warranty: This software is provided "as is," without warranty of any kind. Use of this plugin is at your own risk. You are responsible for complying with the respective terms of service and brand guidelines of any agent CLI you use.
 
 ## Features
 
-- **Tool window** — “Claude Code” at the bottom of the IDE with an embedded terminal.
+- **Tool window** — "Agent CLI" at the bottom of the IDE with an embedded terminal.
+- **Multi-agent support** — launch sessions for Claude Code or Cursor from the same tool window.
 - **Multiple sessions** — create, switch, and close sessions from the sidebar (`+` for new; middle-click or the close affordance to close).
 - **Session history** — browse past sessions for the current project (from `~/.claude/projects/…`) and resume by ID when not already open.
 - **Theme sync** — terminal colors follow the IDE look-and-feel / editor colors where applicable.
-- **Settings** — configurable CLI command and terminal font size (**Settings → Tools → Claude Code Plugin**).
+- **Settings** — configurable CLI commands and terminal font size (**Settings → Tools → Agent CLI**).
 
 ## Requirements
 
 - **IDE build** — compatible range is defined in `build.gradle.kts` (`sinceBuild` / `untilBuild`; currently **241–262.\***).
 - **JCEF** — the embedded terminal needs a **JetBrains Runtime (JBR) with JCEF**. If JCEF is unavailable, the tool window shows a short fallback message instead of the terminal.
-- **Claude Code CLI** — install and authenticate [`claude-code`](https://www.anthropic.com/claude-code) (or your chosen wrapper, e.g. `cc`) on your machine; the plugin launches it inside a shell according to **Settings**.
+- **Agent CLI(s)** — install and authenticate the agent(s) you want to use:
+  - [Claude Code](https://www.anthropic.com/claude-code) (default command: `claude`)
+  - [Cursor](https://www.cursor.com/) (default command: `agent`)
 - **JDK 17** — used to compile the plugin (see `build.gradle.kts`).
 
 ## Configuration
 
 | Setting | Description |
 |--------|-------------|
-| **Claude command** | Command used to start Claude Code (default e.g. `cc`). |
+| **Claude command** | Command used to start Claude Code (default: `claude`). |
+| **Cursor command** | Command used to start Cursor agent (default: `agent`). |
 | **Terminal font size** | Font size for the embedded xterm (allowed range as in the settings UI). |
 
 Persistent settings are stored in the application-level component configured in `plugin.xml`.
@@ -60,7 +70,7 @@ Platform version and IDE type (e.g. IntelliJ Community vs other IDEs) are contro
 |------|------|
 | `src/main/kotlin/.../toolwindow/` | Tool window factory, main panel, sidebar, history dialog |
 | `src/main/kotlin/.../terminal/` | JCEF panel, PTY bridge, HTML shell, theme JSON |
-| `src/main/kotlin/.../session/` | Session manager, Claude Code history reader |
+| `src/main/kotlin/.../session/` | Session manager, history readers (Claude Code, Cursor) |
 | `src/main/kotlin/.../settings/` | Persistent settings and configurable UI |
 | `src/main/resources/META-INF/plugin.xml` | Plugin descriptor |
 | `src/main/resources/META-INF/pluginIcon.svg` | Plugin logo (Plugins list / Marketplace) |
@@ -70,8 +80,8 @@ Platform version and IDE type (e.g. IntelliJ Community vs other IDEs) are contro
 ## Troubleshooting
 
 - **No embedded terminal / JCEF message** — use an IDE distribution that ships **JCEF** (typically recent JetBrains IDEs on supported OS/architectures).
-- **CLI not found or wrong shell** — ensure `PATH` in the IDE environment includes your Claude Code binary; adjust **Claude command** in settings.
-- **History empty** — history is resolved from Claude’s project folder under your home directory; paths must match how Claude Code encodes the project.
+- **CLI not found or wrong shell** — ensure `PATH` in the IDE environment includes the agent CLI binary; adjust the relevant command in **Settings → Tools → Agent CLI**.
+- **History empty** — history is resolved from the agent's project folder under your home directory; paths must match how the agent encodes the project.
 
 ## Version
 

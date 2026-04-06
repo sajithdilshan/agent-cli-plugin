@@ -7,7 +7,7 @@ import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefJSQuery
 import org.cef.CefSettings
-import org.sajith.agentcli.plugin.settings.ClaudeCodeSettings
+import org.sajith.agentcli.plugin.settings.AgentCliSettings
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.handler.CefDisplayHandlerAdapter
@@ -135,7 +135,7 @@ class CefTerminalPanel(
     }
 
     private fun buildTerminalHtml(): String {
-        val fontSize = ClaudeCodeSettings.getInstance().terminalFontSize
+        val fontSize = AgentCliSettings.getInstance().terminalFontSize
         val xtermJs = readResource("/terminal/xterm.js")
         val xtermCss = readResource("/terminal/xterm.css")
         val fitAddonJs = readResource("/terminal/xterm-addon-fit.js")
