@@ -1,4 +1,4 @@
-package org.sajith.claudecode.plugin.terminal
+package org.sajith.agentcli.plugin.terminal
 
 /**
  * HTML shell for the embedded xterm.js page loaded in JCEF. Bundled script/CSS blobs and

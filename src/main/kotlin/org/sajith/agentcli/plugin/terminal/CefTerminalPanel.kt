@@ -1,4 +1,4 @@
-package org.sajith.claudecode.plugin.terminal
+package org.sajith.agentcli.plugin.terminal
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
@@ -6,10 +6,12 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefJSQuery
-import org.sajith.claudecode.plugin.settings.ClaudeCodeSettings
+import org.cef.CefSettings
+import org.sajith.agentcli.plugin.settings.ClaudeCodeSettings
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.handler.CefDisplayHandlerAdapter
+import org.cef.handler.CefLoadHandler
 import org.cef.handler.CefLoadHandlerAdapter
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
@@ -88,7 +90,7 @@ class CefTerminalPanel(
 
             override fun onLoadError(
                 browser: CefBrowser, frame: CefFrame,
-                errorCode: org.cef.handler.CefLoadHandler.ErrorCode,
+                errorCode: CefLoadHandler.ErrorCode,
                 errorText: String, failedUrl: String
             ) {
                 LOG.error("[ClaudeCode] CefTerminalPanel: page load error: code=$errorCode text='$errorText' url='$failedUrl'")
@@ -97,14 +99,14 @@ class CefTerminalPanel(
 
         browser.jbCefClient.addDisplayHandler(object : CefDisplayHandlerAdapter() {
             override fun onConsoleMessage(
-                browser: CefBrowser, level: org.cef.CefSettings.LogSeverity,
+                browser: CefBrowser, level: CefSettings.LogSeverity,
                 message: String, source: String, line: Int
             ): Boolean {
                 when (level) {
-                    org.cef.CefSettings.LogSeverity.LOGSEVERITY_ERROR,
-                    org.cef.CefSettings.LogSeverity.LOGSEVERITY_FATAL ->
+                    CefSettings.LogSeverity.LOGSEVERITY_ERROR,
+                    CefSettings.LogSeverity.LOGSEVERITY_FATAL ->
                         LOG.error("[ClaudeCode] JS: $message ($source:$line)")
-                    org.cef.CefSettings.LogSeverity.LOGSEVERITY_WARNING ->
+                    CefSettings.LogSeverity.LOGSEVERITY_WARNING ->
                         LOG.warn("[ClaudeCode] JS: $message ($source:$line)")
                     else -> {}
                 }

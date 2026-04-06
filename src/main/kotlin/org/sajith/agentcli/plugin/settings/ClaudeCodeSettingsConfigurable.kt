@@ -1,4 +1,4 @@
-package org.sajith.claudecode.plugin.settings
+package org.sajith.agentcli.plugin.settings
 
 import com.intellij.openapi.options.BoundSearchableConfigurable
 import com.intellij.ui.dsl.builder.bindIntText

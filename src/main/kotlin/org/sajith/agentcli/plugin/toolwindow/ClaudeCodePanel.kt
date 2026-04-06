@@ -1,4 +1,4 @@
-package org.sajith.claudecode.plugin.toolwindow
+package org.sajith.agentcli.plugin.toolwindow
 
 import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
@@ -6,11 +6,11 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
-import org.sajith.claudecode.plugin.session.ClaudeCodeSession
-import org.sajith.claudecode.plugin.session.SessionManager
-import org.sajith.claudecode.plugin.settings.ClaudeCodeSettings
-import org.sajith.claudecode.plugin.terminal.CefTerminalPanel
-import org.sajith.claudecode.plugin.terminal.PtyBridge
+import org.sajith.agentcli.plugin.session.ClaudeCodeSession
+import org.sajith.agentcli.plugin.session.SessionManager
+import org.sajith.agentcli.plugin.settings.ClaudeCodeSettings
+import org.sajith.agentcli.plugin.terminal.CefTerminalPanel
+import org.sajith.agentcli.plugin.terminal.PtyBridge
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import javax.swing.JPanel

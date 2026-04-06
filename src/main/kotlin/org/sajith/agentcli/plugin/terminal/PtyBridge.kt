@@ -1,4 +1,4 @@
-package org.sajith.claudecode.plugin.terminal
+package org.sajith.agentcli.plugin.terminal
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger

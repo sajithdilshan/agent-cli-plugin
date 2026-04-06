@@ -15,16 +15,16 @@
         <toolWindow id="Claude Code"
                     anchor="bottom"
                     secondary="false"
-                    factoryClass="org.sajith.claudecode.plugin.toolwindow.ClaudeCodeToolWindowFactory"
+                    factoryClass="org.sajith.agentcli.plugin.toolwindow.ClaudeCodeToolWindowFactory"
                     icon="/icons/claude-code.svg"/>
 
         <applicationConfigurable
                 id="org.sajith.claudecode.plugin.settings"
                 groupId="tools"
                 displayName="Claude Code Plugin"
-                instance="org.sajith.claudecode.plugin.settings.ClaudeCodeSettingsConfigurable"/>
+                instance="org.sajith.agentcli.plugin.settings.ClaudeCodeSettingsConfigurable"/>
 
         <applicationService
-                serviceImplementation="org.sajith.claudecode.plugin.settings.ClaudeCodeSettings"/>
+                serviceImplementation="org.sajith.agentcli.plugin.settings.ClaudeCodeSettings"/>
     </extensions>
 </idea-plugin>

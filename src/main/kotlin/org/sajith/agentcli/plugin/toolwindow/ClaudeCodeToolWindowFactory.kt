@@ -1,4 +1,4 @@
-package org.sajith.claudecode.plugin.toolwindow
+package org.sajith.agentcli.plugin.toolwindow
 
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.DumbAware

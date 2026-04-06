@@ -1,4 +1,4 @@
-package org.sajith.claudecode.plugin.session
+package org.sajith.agentcli.plugin.session
 
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter

@@ -1,8 +1,9 @@
-package org.sajith.claudecode.plugin.toolwindow
+package org.sajith.agentcli.plugin.toolwindow
 
-import org.sajith.claudecode.plugin.session.ClaudeCodeHistoryReader
-import org.sajith.claudecode.plugin.session.ClaudeCodeSession
-import org.sajith.claudecode.plugin.session.SessionManager
+import com.intellij.icons.AllIcons
+import org.sajith.agentcli.plugin.session.ClaudeCodeHistoryReader
+import org.sajith.agentcli.plugin.session.ClaudeCodeSession
+import org.sajith.agentcli.plugin.session.SessionManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.ui.JBColor
@@ -77,7 +78,7 @@ class SessionSidebarPanel(
 
         val buttonSize = Dimension(JBUI.scale(28), JBUI.scale(28))
 
-        val newSessionButton = JButton(com.intellij.icons.AllIcons.General.Add).apply {
+        val newSessionButton = JButton(AllIcons.General.Add).apply {
             toolTipText = "New Session"
             maximumSize = buttonSize
             preferredSize = buttonSize
@@ -90,7 +91,7 @@ class SessionSidebarPanel(
             addActionListener { onNewSession() }
         }
 
-        val historyButton = JButton(com.intellij.icons.AllIcons.Vcs.History).apply {
+        val historyButton = JButton(AllIcons.Vcs.History).apply {
             toolTipText = "Session History"
             maximumSize = buttonSize
             preferredSize = buttonSize
@@ -103,7 +104,7 @@ class SessionSidebarPanel(
             addActionListener { showHistoryDialog() }
         }
 
-        collapseButton = JButton(com.intellij.icons.AllIcons.Actions.ArrowCollapse).apply {
+        collapseButton = JButton(AllIcons.Actions.ArrowCollapse).apply {
             toolTipText = "Toggle Sessions Panel"
             maximumSize = buttonSize
             preferredSize = buttonSize
@@ -130,7 +131,7 @@ class SessionSidebarPanel(
     private fun toggleCollapse() {
         isCollapsed = !isCollapsed
         sessionListPanel.isVisible = !isCollapsed
-        collapseButton.icon = if (isCollapsed) com.intellij.icons.AllIcons.Actions.ArrowExpand else com.intellij.icons.AllIcons.Actions.ArrowCollapse
+        collapseButton.icon = if (isCollapsed) AllIcons.Actions.ArrowExpand else AllIcons.Actions.ArrowCollapse
         collapseButton.toolTipText = if (isCollapsed) "Show Sessions Panel" else "Hide Sessions Panel"
         revalidate()
         repaint()
@@ -177,7 +178,7 @@ class SessionSidebarPanel(
         val session = sessionListModel.getElementAt(index)
 
         val menu = JPopupMenu()
-        val closeItem = JMenuItem("Close Session", com.intellij.icons.AllIcons.Actions.Close)
+        val closeItem = JMenuItem("Close Session", AllIcons.Actions.Close)
         closeItem.addActionListener { onSessionClosed(session) }
         menu.add(closeItem)
         menu.show(sessionList, e.x, e.y)
@@ -282,7 +283,7 @@ class SessionSidebarPanel(
                     add(timeLabel, BorderLayout.SOUTH)
                 }
 
-                val closeLabel = JLabel(com.intellij.icons.AllIcons.Actions.Close).apply {
+                val closeLabel = JLabel(AllIcons.Actions.Close).apply {
                     foreground = if (isSelected) list.selectionForeground else JBColor.GRAY
                     preferredSize = Dimension(closeIconSize, closeIconSize)
                     minimumSize = Dimension(closeIconSize, closeIconSize)

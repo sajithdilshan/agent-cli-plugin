@@ -1,4 +1,4 @@
-package org.sajith.claudecode.plugin.session
+package org.sajith.agentcli.plugin.session
 
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project

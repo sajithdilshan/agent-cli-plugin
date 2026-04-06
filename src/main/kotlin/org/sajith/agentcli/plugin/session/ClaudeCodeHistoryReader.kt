@@ -1,4 +1,4 @@
-package org.sajith.claudecode.plugin.session
+package org.sajith.agentcli.plugin.session
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser

@@ -1,4 +1,4 @@
-package org.sajith.claudecode.plugin.terminal
+package org.sajith.agentcli.plugin.terminal
 
 import com.intellij.ide.ui.LafManager
 import com.intellij.openapi.editor.colors.EditorColorsManager

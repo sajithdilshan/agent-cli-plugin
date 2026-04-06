@@ -1,6 +1,6 @@
-package org.sajith.claudecode.plugin.toolwindow
+package org.sajith.agentcli.plugin.toolwindow
 
-import org.sajith.claudecode.plugin.session.HistoricalSession
+import org.sajith.agentcli.plugin.session.HistoricalSession
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.ui.JBColor
