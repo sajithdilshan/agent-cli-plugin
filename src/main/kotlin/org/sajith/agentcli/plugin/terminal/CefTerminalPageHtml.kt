@@ -6,6 +6,7 @@ package org.sajith.agentcli.plugin.terminal
  */
 internal fun buildCefTerminalPageHtml(
     fontSize: Int,
+    fontFaceCss: String,
     xtermCss: String,
     xtermJs: String,
     fitAddonJs: String,
@@ -18,6 +19,9 @@ internal fun buildCefTerminalPageHtml(
 <html>
 <head>
 <meta charset="UTF-8">
+<style>
+$fontFaceCss
+</style>
 <style>
 html, body {
     margin: 0;

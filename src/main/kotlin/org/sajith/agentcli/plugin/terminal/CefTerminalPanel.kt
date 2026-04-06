@@ -141,12 +141,14 @@ class CefTerminalPanel(
         val fitAddonJs = readResource("/terminal/xterm-addon-fit.js")
         val webLinksAddonJs = readResource("/terminal/xterm-addon-web-links.js")
         val unicode11AddonJs = readResource("/terminal/xterm-addon-unicode11.js")
+        val fontFaceCss = buildFontFaceCss()
 
         val inputQueryJs = inputQuery.inject("base64")
         val resizeQueryJs = resizeQuery.inject("size")
 
         return buildCefTerminalPageHtml(
             fontSize = fontSize,
+            fontFaceCss = fontFaceCss,
             xtermCss = xtermCss,
             xtermJs = xtermJs,
             fitAddonJs = fitAddonJs,
@@ -155,6 +157,34 @@ class CefTerminalPanel(
             inputQueryJs = inputQueryJs,
             resizeQueryJs = resizeQueryJs,
         )
+    }
+
+    private fun buildFontFaceCss(): String {
+        val regularBase64 = readResourceBase64("/fonts/InconsolataNerdFontMono-Regular.ttf")
+        val boldBase64 = readResourceBase64("/fonts/InconsolataNerdFontMono-Bold.ttf")
+        return """
+@font-face {
+    font-family: 'Inconsolata Nerd Font Mono';
+    src: url(data:font/truetype;base64,$regularBase64) format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+@font-face {
+    font-family: 'Inconsolata Nerd Font Mono';
+    src: url(data:font/truetype;base64,$boldBase64) format('truetype');
+    font-weight: bold;
+    font-style: normal;
+}
+        """.trim()
+    }
+
+    private fun readResourceBase64(path: String): String {
+        val stream = javaClass.getResourceAsStream(path)
+        if (stream == null) {
+            LOG.error("[ClaudeCode] readResourceBase64: resource NOT FOUND at path '$path'")
+            throw IllegalStateException("Resource not found: $path")
+        }
+        return Base64.getEncoder().encodeToString(stream.readBytes())
     }
 
     private fun readResource(path: String): String {
