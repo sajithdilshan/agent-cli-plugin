@@ -13,7 +13,7 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow id="Claude Code"
-                    anchor="bottom"
+                    anchor="right"
                     secondary="false"
                     factoryClass="org.sajith.agentcli.plugin.toolwindow.AgentCliToolWindowFactory"
                     icon="/icons/agent-cli.svg"/>
