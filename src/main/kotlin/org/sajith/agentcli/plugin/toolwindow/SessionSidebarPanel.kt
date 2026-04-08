@@ -2,42 +2,38 @@ package org.sajith.agentcli.plugin.toolwindow
 
 import com.intellij.icons.AllIcons
 import com.intellij.ide.DataManager
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
-import com.intellij.openapi.ui.popup.JBPopupFactory
-import com.intellij.ui.awt.RelativePoint
-import org.sajith.agentcli.plugin.AgentType
-import org.sajith.agentcli.plugin.session.ClaudeCodeHistoryReader
-import org.sajith.agentcli.plugin.session.AgentCliSession
-import org.sajith.agentcli.plugin.session.CursorHistoryReader
-import org.sajith.agentcli.plugin.session.GeminiHistoryReader
-import org.sajith.agentcli.plugin.session.SessionManager
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.popup.JBPopupFactory
+import com.intellij.ui.ColoredListCellRenderer
 import com.intellij.ui.JBColor
+import com.intellij.ui.SimpleTextAttributes
+import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
+import org.sajith.agentcli.plugin.AgentType
+import org.sajith.agentcli.plugin.session.AgentCliSession
+import org.sajith.agentcli.plugin.session.ClaudeCodeHistoryReader
+import org.sajith.agentcli.plugin.session.CursorHistoryReader
+import org.sajith.agentcli.plugin.session.GeminiHistoryReader
+import org.sajith.agentcli.plugin.session.SessionManager
 import java.awt.BorderLayout
-import java.awt.Component
-import java.awt.Cursor
 import java.awt.Dimension
-import java.awt.Font
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import javax.swing.Box
-import javax.swing.BoxLayout
 import javax.swing.DefaultListModel
-import javax.swing.JButton
 import javax.swing.JComponent
-import javax.swing.JLabel
 import javax.swing.JList
 import javax.swing.JOptionPane
 import javax.swing.JPanel
-import javax.swing.ListCellRenderer
 import javax.swing.ListSelectionModel
-import javax.swing.SwingConstants
 import javax.swing.SwingUtilities
 import javax.swing.border.MatteBorder
 
@@ -54,17 +50,13 @@ class SessionSidebarPanel(
     private var selectedSession: AgentCliSession? = null
 
     private val sessionListPanel: JPanel
-    private lateinit var collapseButton: JButton
     private var isCollapsed = false
 
     init {
         background = JBColor.PanelBackground
 
-        // Narrow vertical icon strip (always visible)
-        val iconStrip = createIconStrip()
-        add(iconStrip, BorderLayout.WEST)
+        add(createIconStrip(), BorderLayout.WEST)
 
-        // Collapsible session list panel
         sessionListPanel = JPanel(BorderLayout()).apply {
             background = JBColor.PanelBackground
             border = MatteBorder(0, 0, 0, 1, JBColor.border())
@@ -75,105 +67,56 @@ class SessionSidebarPanel(
         add(sessionListPanel, BorderLayout.CENTER)
     }
 
-    private fun createIconStrip(): JPanel {
-        val strip = JPanel().apply {
-            layout = BoxLayout(this, BoxLayout.Y_AXIS)
-            background = JBColor.PanelBackground
-            border = MatteBorder(0, 0, 0, 1, JBColor.border())
-            preferredSize = Dimension(JBUI.scale(30), 0)
-        }
-
-        val buttonSize = Dimension(JBUI.scale(28), JBUI.scale(28))
-
-        val newSessionButton = JButton(AllIcons.General.Add).apply {
-            toolTipText = "New Session"
-            maximumSize = buttonSize
-            preferredSize = buttonSize
-            alignmentX = CENTER_ALIGNMENT
-            isFocusPainted = false
-            isBorderPainted = false
-            isContentAreaFilled = false
-            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-            font = font.deriveFont(Font.BOLD, 14f)
-            addActionListener { e ->
-                val button = e.source as JButton
-                val group = DefaultActionGroup().apply {
-                    AgentType.entries.forEach { agentType ->
-                        add(object : AnAction(agentType.displayName, "New ${agentType.displayName} session", null) {
-                            override fun actionPerformed(e: AnActionEvent) {
-                                onNewSession(agentType)
-                            }
-                        })
-                    }
+    private fun createIconStrip(): JComponent {
+        val group = DefaultActionGroup().apply {
+            add(object : AnAction("New Session", "Create a new session", AllIcons.General.Add) {
+                override fun actionPerformed(e: AnActionEvent) {
+                    showAgentTypePopup(e) { agentType -> onNewSession(agentType) }
                 }
-                val popup = JBPopupFactory.getInstance().createActionGroupPopup(
-                    null, group, DataManager.getInstance().getDataContext(button),
-                    JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, false
-                )
-                popup.showUnderneathOf(button)
-            }
-        }
-
-        val historyButton = JButton(AllIcons.Vcs.History).apply {
-            toolTipText = "Session History"
-            maximumSize = buttonSize
-            preferredSize = buttonSize
-            alignmentX = CENTER_ALIGNMENT
-            isFocusPainted = false
-            isBorderPainted = false
-            isContentAreaFilled = false
-            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-            font = font.deriveFont(Font.PLAIN, 12f)
-            addActionListener { e ->
-                val button = e.source as JButton
-                val group = DefaultActionGroup().apply {
-                    AgentType.entries.forEach { agentType ->
-                        add(object : AnAction(agentType.displayName, "Show ${agentType.displayName} history", null) {
-                            override fun actionPerformed(e: AnActionEvent) {
-                                showHistoryDialog(agentType)
-                            }
-                        })
-                    }
+            })
+            add(object : AnAction("Session History", "Browse session history", AllIcons.Vcs.History) {
+                override fun actionPerformed(e: AnActionEvent) {
+                    showAgentTypePopup(e) { agentType -> showHistoryDialog(agentType) }
                 }
-                val popup = JBPopupFactory.getInstance().createActionGroupPopup(
-                    null, group, DataManager.getInstance().getDataContext(button),
-                    JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, false
-                )
-                popup.showUnderneathOf(button)
-            }
+            })
+            add(object : AnAction(
+                "Toggle Sessions Panel",
+                "Show or hide the sessions panel",
+                AllIcons.Actions.ArrowCollapse
+            ) {
+                override fun actionPerformed(e: AnActionEvent) {
+                    isCollapsed = !isCollapsed
+                    sessionListPanel.isVisible = !isCollapsed
+                    e.presentation.icon =
+                        if (isCollapsed) AllIcons.Actions.ArrowExpand else AllIcons.Actions.ArrowCollapse
+                    revalidate()
+                    repaint()
+                }
+            })
         }
-
-        collapseButton = JButton(AllIcons.Actions.ArrowCollapse).apply {
-            toolTipText = "Toggle Sessions Panel"
-            maximumSize = buttonSize
-            preferredSize = buttonSize
-            alignmentX = CENTER_ALIGNMENT
-            isFocusPainted = false
-            isBorderPainted = false
-            isContentAreaFilled = false
-            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-            font = font.deriveFont(Font.PLAIN, 10f)
-            addActionListener { toggleCollapse() }
-        }
-
-        strip.add(Box.createVerticalStrut(JBUI.scale(4)))
-        strip.add(newSessionButton)
-        strip.add(Box.createVerticalStrut(JBUI.scale(2)))
-        strip.add(historyButton)
-        strip.add(Box.createVerticalStrut(JBUI.scale(2)))
-        strip.add(collapseButton)
-        strip.add(Box.createVerticalGlue())
-
-        return strip
+        val toolbar = ActionManager.getInstance()
+            .createActionToolbar(ActionPlaces.TOOLWINDOW_CONTENT, group, false)
+        toolbar.targetComponent = this
+        toolbar.component.border = MatteBorder(0, 0, 0, 1, JBColor.border())
+        return toolbar.component
     }
 
-    private fun toggleCollapse() {
-        isCollapsed = !isCollapsed
-        sessionListPanel.isVisible = !isCollapsed
-        collapseButton.icon = if (isCollapsed) AllIcons.Actions.ArrowExpand else AllIcons.Actions.ArrowCollapse
-        collapseButton.toolTipText = if (isCollapsed) "Show Sessions Panel" else "Hide Sessions Panel"
-        revalidate()
-        repaint()
+    private fun showAgentTypePopup(e: AnActionEvent, onSelected: (AgentType) -> Unit) {
+        val group = DefaultActionGroup().apply {
+            AgentType.entries.forEach { agentType ->
+                add(object : AnAction(agentType.displayName) {
+                    override fun actionPerformed(e: AnActionEvent) {
+                        onSelected(agentType)
+                    }
+                })
+            }
+        }
+        val component = e.inputEvent?.component ?: this
+        val popup = JBPopupFactory.getInstance().createActionGroupPopup(
+            null, group, DataManager.getInstance().getDataContext(component),
+            JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, false
+        )
+        popup.showUnderneathOf(component)
     }
 
     private fun createSessionList(): JComponent {
@@ -234,19 +177,11 @@ class SessionSidebarPanel(
         if (SwingUtilities.isMiddleMouseButton(e)) {
             val index = sessionList.locationToIndex(e.point)
             if (index >= 0) {
-                onSessionClosed(sessionListModel.getElementAt(index))
+                val cellBounds = sessionList.getCellBounds(index, index)
+                if (cellBounds != null && cellBounds.contains(e.point)) {
+                    onSessionClosed(sessionListModel.getElementAt(index))
+                }
             }
-            return
-        }
-        if (!SwingUtilities.isLeftMouseButton(e)) return
-
-        val index = sessionList.locationToIndex(e.point)
-        if (index < 0) return
-        val cellBounds = sessionList.getCellBounds(index, index)
-        val relativeX = e.x - cellBounds.x
-        val closeButtonX = cellBounds.width - JBUI.scale(28)
-        if (relativeX >= closeButtonX) {
-            onSessionClosed(sessionListModel.getElementAt(index))
         }
     }
 
@@ -300,52 +235,20 @@ class SessionSidebarPanel(
         }
     }
 
-    private class SessionListCellRenderer : ListCellRenderer<AgentCliSession> {
-        private val closeIconSize = JBUI.scale(20)
+    companion object {
+        private val LOG = Logger.getInstance(SessionSidebarPanel::class.java)
+    }
 
-        override fun getListCellRendererComponent(
+    private class SessionListCellRenderer : ColoredListCellRenderer<AgentCliSession>() {
+        override fun customizeCellRenderer(
             list: JList<out AgentCliSession>,
             value: AgentCliSession,
             index: Int,
-            isSelected: Boolean,
-            cellHasFocus: Boolean
-        ): Component {
-            return JPanel(BorderLayout(JBUI.scale(2), 0)).apply {
-                border = JBUI.Borders.empty(4, 6, 4, 4)
-                background = if (isSelected) list.selectionBackground else list.background
-
-                val nameLabel = JLabel(value.displayName).apply {
-                    foreground = if (isSelected) list.selectionForeground else list.foreground
-                    font = font.deriveFont(Font.PLAIN, 12f)
-                }
-
-                val timeLabel = JLabel(value.formattedTime).apply {
-                    foreground = JBColor.GRAY
-                    font = font.deriveFont(Font.PLAIN, 10f)
-                }
-
-                val textPanel = JPanel(BorderLayout()).apply {
-                    isOpaque = false
-                    // Constrain width so it never pushes the close button out
-                    minimumSize = Dimension(0, 0)
-                    add(nameLabel, BorderLayout.CENTER)
-                    add(timeLabel, BorderLayout.SOUTH)
-                }
-
-                val closeLabel = JLabel(AllIcons.Actions.Close).apply {
-                    foreground = if (isSelected) list.selectionForeground else JBColor.GRAY
-                    preferredSize = Dimension(closeIconSize, closeIconSize)
-                    minimumSize = Dimension(closeIconSize, closeIconSize)
-                    maximumSize = Dimension(closeIconSize, closeIconSize)
-                    horizontalAlignment = SwingConstants.CENTER
-                    verticalAlignment = SwingConstants.CENTER
-                    toolTipText = "Close session"
-                    cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-                }
-
-                add(textPanel, BorderLayout.CENTER)
-                add(closeLabel, BorderLayout.EAST)
-            }
+            selected: Boolean,
+            hasFocus: Boolean
+        ) {
+            append(value.displayName)
+            append("  ${value.formattedTime}", SimpleTextAttributes.GRAYED_SMALL_ATTRIBUTES)
         }
     }
 }
