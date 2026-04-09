@@ -12,9 +12,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import java.util.concurrent.CompletableFuture
-import com.intellij.ui.ColoredListCellRenderer
 import com.intellij.ui.JBColor
-import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
