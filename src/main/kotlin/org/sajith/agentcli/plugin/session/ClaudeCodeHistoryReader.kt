@@ -46,16 +46,20 @@ object ClaudeCodeHistoryReader {
         return claudeDir.listFiles { f -> f.isDirectory }?.firstOrNull { it.name == encodedPath }
     }
 
+    /**
+     * Lightweight parse: reads only the first few lines to extract title and first user message.
+     * Uses file modification time as timestamp to avoid scanning deep into large files.
+     */
     private fun parseSessionFile(file: File): HistoricalSession? {
         val sessionId = file.nameWithoutExtension
         var customTitle = ""
         var firstUserMessage = ""
-        var timestamp: LocalDateTime? = null
-        var messageCount = 0
+        var linesScanned = 0
 
         file.bufferedReader().useLines { lines ->
             for (line in lines) {
                 if (line.isBlank()) continue
+                linesScanned++
                 try {
                     val obj = JsonParser.parseString(line).asJsonObject
                     val type = obj.get("type")?.asString ?: continue
@@ -64,31 +68,31 @@ object ClaudeCodeHistoryReader {
                         customTitle = obj.get("customTitle")?.asString ?: ""
                     }
 
-                    if (type == "user") {
-                        messageCount++
-
-                        if (firstUserMessage.isEmpty()) {
-                            firstUserMessage = extractUserMessage(obj)
-                        }
-                        if (timestamp == null) {
-                            val ts = obj.get("timestamp")?.asString
-                            timestamp = ts?.let { parseTimestamp(it) }
-                        }
+                    if (type == "user" && firstUserMessage.isEmpty()) {
+                        firstUserMessage = extractUserMessage(obj)
+                        // Stop once we have the first user message — title usually appears before it
+                        break
                     }
                 } catch (_: Exception) {
                     // Skip malformed lines
                 }
+
+                // Safety cap: don't scan more than 50 lines per file
+                if (linesScanned >= 50) break
             }
         }
 
-        val ts = timestamp ?: return null
+        // Use file modification time — fast and avoids parsing timestamps from JSON
+        val timestamp = LocalDateTime.ofInstant(
+            Instant.ofEpochMilli(file.lastModified()), ZoneId.systemDefault()
+        )
 
         return HistoricalSession(
             sessionId = sessionId,
             customTitle = customTitle,
             firstMessage = firstUserMessage,
-            timestamp = ts,
-            messageCount = messageCount
+            timestamp = timestamp,
+            messageCount = 0
         )
     }
 

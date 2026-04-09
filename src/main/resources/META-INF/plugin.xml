@@ -15,6 +15,7 @@
         <toolWindow id="Agent CLI"
                     anchor="right"
                     secondary="false"
+                    canCloseContents="false"
                     factoryClass="org.sajith.agentcli.plugin.toolwindow.AgentCliToolWindowFactory"
                     icon="/icons/agent-cli.svg"/>
 

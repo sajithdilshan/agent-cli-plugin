@@ -6,6 +6,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
+import com.intellij.ui.OnePixelSplitter
 import org.sajith.agentcli.plugin.AgentType
 import org.sajith.agentcli.plugin.session.AgentCliSession
 import org.sajith.agentcli.plugin.session.SessionManager
@@ -36,9 +37,21 @@ class AgentCliPanel(
         onResumeSession = { agentType, sessionId, title -> resumeSession(agentType, sessionId, title) }
     )
 
+    private val splitter = OnePixelSplitter(false, 0.2f)
+    private var savedProportion = 0.2f
+
     init {
-        add(terminalPanel, BorderLayout.CENTER)
-        add(sidebar, BorderLayout.WEST)
+        splitter.firstComponent = sidebar
+        splitter.secondComponent = terminalPanel
+        sidebar.onCollapseToggle = { collapsed ->
+            if (collapsed) {
+                savedProportion = splitter.proportion
+                splitter.proportion = 0.0f
+            } else {
+                splitter.proportion = savedProportion
+            }
+        }
+        add(splitter, BorderLayout.CENTER)
 
         // Keep embedded terminals in sync when the IDE LaF / editor colors change.
         project.messageBus.connect(parentDisposable)

@@ -25,11 +25,11 @@ class AgentCliToolWindowFactory : ToolWindowFactory, DumbAware {
             return
         }
 
+        LOG.info("[AgentCLI] createToolWindowContent START")
         val panel = AgentCliPanel(project, toolWindow.disposable)
         val content = ContentFactory.getInstance().createContent(panel, "", false)
         toolWindow.contentManager.addContent(content)
-
-        panel.createNewSession()
+        LOG.info("[AgentCLI] createToolWindowContent END")
     }
 
     companion object {

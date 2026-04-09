@@ -1,5 +1,6 @@
 package org.sajith.agentcli.plugin.session
 
+import org.sajith.agentcli.plugin.AgentType
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -8,7 +9,8 @@ data class HistoricalSession(
     val customTitle: String,
     val firstMessage: String,
     val timestamp: LocalDateTime,
-    val messageCount: Int
+    val messageCount: Int,
+    val agentType: AgentType = AgentType.CLAUDE
 ) {
     val displayName: String
         get() {
