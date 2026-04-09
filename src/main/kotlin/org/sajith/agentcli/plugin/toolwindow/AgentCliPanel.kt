@@ -10,6 +10,7 @@ import com.intellij.ui.OnePixelSplitter
 import org.sajith.agentcli.plugin.AgentType
 import org.sajith.agentcli.plugin.session.AgentCliSession
 import org.sajith.agentcli.plugin.session.SessionManager
+import org.sajith.agentcli.plugin.session.SessionHistoryDeleter
 import org.sajith.agentcli.plugin.settings.AgentCliSettings
 import org.sajith.agentcli.plugin.terminal.CefTerminalPanel
 import org.sajith.agentcli.plugin.terminal.PtyBridge
@@ -34,7 +35,9 @@ class AgentCliPanel(
         onNewSession = { agentType -> createNewSession(agentType) },
         onSessionSelected = { session -> switchToSession(session) },
         onSessionClosed = { session -> closeSession(session) },
-        onResumeSession = { agentType, sessionId, title -> resumeSession(agentType, sessionId, title) }
+        onSessionDeleted = { session -> deleteSession(session) },
+        onResumeSession = { agentType, sessionId, title -> resumeSession(agentType, sessionId, title) },
+        onHistorySessionDeleted = { historicalSession -> deleteHistorySession(historicalSession) }
     )
 
     private val splitter = OnePixelSplitter(false, 0.2f)
@@ -199,6 +202,26 @@ class AgentCliPanel(
         // removeSession() selects the last list row; align selection with the visible terminal card.
         activeSessionId?.let { id ->
             sessionManager.sessions.find { it.id == id }?.let { sidebar.selectSession(it) }
+        }
+    }
+
+    private fun deleteSession(session: AgentCliSession) {
+        val projectPath = project.basePath ?: return
+        closeSession(session)
+        ApplicationManager.getApplication().executeOnPooledThread {
+            val sessionId = session.agentSessionId ?: session.id
+            SessionHistoryDeleter.deleteSession(sessionId, session.agentType, projectPath)
+        }
+    }
+
+    private fun deleteHistorySession(historicalSession: org.sajith.agentcli.plugin.session.HistoricalSession) {
+        val projectPath = project.basePath ?: return
+        ApplicationManager.getApplication().executeOnPooledThread {
+            SessionHistoryDeleter.deleteSession(
+                historicalSession.sessionId,
+                historicalSession.agentType,
+                projectPath
+            )
         }
     }
 

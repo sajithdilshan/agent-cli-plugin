@@ -59,7 +59,9 @@ class SessionSidebarPanel(
     private val onNewSession: (agentType: AgentType) -> Unit,
     private val onSessionSelected: (AgentCliSession) -> Unit,
     private val onSessionClosed: (AgentCliSession) -> Unit,
-    private val onResumeSession: (agentType: AgentType, sessionId: String, title: String?) -> Unit
+    private val onSessionDeleted: (AgentCliSession) -> Unit,
+    private val onResumeSession: (agentType: AgentType, sessionId: String, title: String?) -> Unit,
+    private val onHistorySessionDeleted: (HistoricalSession) -> Unit
 ) : JPanel(BorderLayout()) {
 
     private val activeSessionListModel = DefaultListModel<AgentCliSession>()
@@ -228,9 +230,41 @@ class SessionSidebarPanel(
                     onSessionClosed(session)
                 }
             })
+            add(object : AnAction("Delete Session", "Close and delete session history", AllIcons.Actions.GC) {
+                override fun actionPerformed(e: AnActionEvent) {
+                    onSessionDeleted(session)
+                }
+            })
         }
         val popup = JBPopupFactory.getInstance().createActionGroupPopup(
             null, group, DataManager.getInstance().getDataContext(activeSessionList),
+            JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, false
+        )
+        popup.show(RelativePoint(e))
+    }
+
+    private fun showHistoryContextMenu(e: MouseEvent) {
+        val index = historyList.locationToIndex(e.point)
+        if (index < 0) return
+        val cellBounds = historyList.getCellBounds(index, index)
+        if (cellBounds == null || !cellBounds.contains(e.point)) return
+
+        val item = historyListModel.getElementAt(index)
+        if (item !is SidebarItem.HistoryEntry) return
+
+        historyList.selectedIndex = index
+        val session = item.session
+
+        val group = DefaultActionGroup().apply {
+            add(object : AnAction("Delete Session", "Delete session history", AllIcons.Actions.GC) {
+                override fun actionPerformed(e: AnActionEvent) {
+                    onHistorySessionDeleted(session)
+                    historyListModel.removeElementAt(index)
+                }
+            })
+        }
+        val popup = JBPopupFactory.getInstance().createActionGroupPopup(
+            null, group, DataManager.getInstance().getDataContext(historyList),
             JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, false
         )
         popup.show(RelativePoint(e))
@@ -266,6 +300,12 @@ class SessionSidebarPanel(
                             loadHistory()
                         }
                     }
+                }
+                override fun mousePressed(e: MouseEvent) {
+                    if (e.isPopupTrigger) showHistoryContextMenu(e)
+                }
+                override fun mouseReleased(e: MouseEvent) {
+                    if (e.isPopupTrigger) showHistoryContextMenu(e)
                 }
             })
         }
