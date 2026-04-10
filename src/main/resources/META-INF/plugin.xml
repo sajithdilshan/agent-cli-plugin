@@ -1,12 +1,18 @@
 <idea-plugin>
     <id>org.sajith.agentcli.plugin</id>
     <name>Agent CLI</name>
-    <version>0.2.0</version>
+    <version>0.3.0</version>
     <vendor>org.sajith</vendor>
 
     <description><![CDATA[
-    Integrates AI Agent CLI sessions directly into your IDE.
-    Open multiple Claude Code, Cursor, Gemini, etc. terminal sessions, switch between them, and browse session history.
+    <ul>
+        <li>Agent CLI tool window with an embedded terminal and a compact session sidebar.</li>
+        <li>Support for Claude Code, Cursor agent, and Gemini CLI — start a session for the agent you use from the + menu.</li>
+        <li>Multiple sessions — create, switch, and close sessions; session history for the current project with resume by session ID where local agent data is available.</li>
+        <li>Theme-aware terminal — colors follow the IDE look-and-feel where applicable.</li>
+        <li>Settings (Settings → Tools → Agent CLI) — configure each agent's launch command and terminal font size.</li>
+    </ul>
+    <p><em>Note: A JetBrains Runtime with JCEF is required for the embedded terminal. Install and sign in to each agent CLI you use separately.</em></p>
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>

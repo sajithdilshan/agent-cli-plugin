@@ -234,6 +234,18 @@ $unicode11AddonJs
 
     // ── Keyboard handling ──────────────────────────────────────────
 
+    // Encode a string to base64, handling Unicode correctly.
+    // btoa() only supports Latin-1; we first encode to UTF-8 bytes
+    // so that pasted text containing emoji, CJK, etc. does not throw.
+    function toBase64(str) {
+        var bytes = new TextEncoder().encode(str);
+        var binary = '';
+        for (var i = 0; i < bytes.length; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binary);
+    }
+
     // Intercept Shift+Enter: send newline so Claude Code CLI treats it
     // as a continuation line rather than submitting the input.
     // Some environments still emit a trailing Enter data event even when Shift+Enter
@@ -264,7 +276,7 @@ $unicode11AddonJs
             }
         }
         try {
-            var base64 = btoa(data);
+            var base64 = toBase64(data);
             $inputQueryJs
         } catch(e) {
             console.error('onData error:', e);
@@ -274,7 +286,7 @@ $unicode11AddonJs
     // Binary input (for special keys)
     term.onBinary(function(data) {
         try {
-            var base64 = btoa(data);
+            var base64 = toBase64(data);
             $inputQueryJs
         } catch(e) {
             console.error('onBinary error:', e);

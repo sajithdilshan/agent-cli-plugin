@@ -1,1 +1,1 @@
-rootProject.name = "claude-code-plugin"
+rootProject.name = "agent-cli-plugin"
