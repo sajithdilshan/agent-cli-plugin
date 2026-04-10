@@ -52,35 +52,32 @@ object ClaudeCodeHistoryReader {
      */
     private fun parseSessionFile(file: File): HistoricalSession {
         val sessionId = file.nameWithoutExtension
-        var customTitle = ""
-        var firstUserMessage = ""
 
+        // First user message: always near the top, scan first 50 lines
+        var firstUserMessage = ""
+        var linesScanned = 0
         file.bufferedReader().useLines { lines ->
             for (line in lines) {
                 if (line.isBlank()) continue
+                linesScanned++
 
-                // Cheap string check before expensive JSON parse
-                if (customTitle.isEmpty() && line.contains("\"custom-title\"")) {
-                    try {
-                        val obj = JsonParser.parseString(line).asJsonObject
-                        customTitle = obj.get("customTitle")?.asString ?: ""
-                    } catch (_: Exception) {
-                    }
-                }
-
-                if (firstUserMessage.isEmpty() && line.contains("\"type\":\"user\"")) {
+                if (line.contains("\"type\":\"user\"")) {
                     try {
                         val obj = JsonParser.parseString(line).asJsonObject
                         if (obj.get("type")?.asString == "user") {
                             firstUserMessage = extractUserMessage(obj)
+                            break
                         }
                     } catch (_: Exception) {
                     }
                 }
 
-                if (customTitle.isNotEmpty() && firstUserMessage.isNotEmpty()) break
+                if (linesScanned >= 50) break
             }
         }
+
+        // Custom title: can appear anywhere, search the file in parallel chunks
+        val customTitle = findCustomTitleParallel(file)
 
         // Use file modification time — fast and avoids parsing timestamps from JSON
         val timestamp =
@@ -96,6 +93,48 @@ object ClaudeCodeHistoryReader {
             timestamp = timestamp,
             messageCount = 0,
         )
+    }
+
+    private fun findCustomTitleParallel(file: File, chunkCount: Int = 4): String {
+        val fileSize = file.length()
+        if (fileSize == 0L) return ""
+
+        val chunkSize = fileSize / chunkCount
+
+        return (0 until chunkCount).toList().parallelStream()
+            .map { i ->
+                val start = i * chunkSize
+                val end = if (i == chunkCount - 1) fileSize else (i + 1) * chunkSize
+                searchChunkForTitle(file, start, end)
+            }
+            .filter { it.isNotEmpty() }
+            .findFirst()
+            .orElse("")
+    }
+
+    private fun searchChunkForTitle(file: File, start: Long, end: Long): String {
+        try {
+            file.inputStream().use { fis ->
+                if (start > 0) fis.skip(start)
+                val reader = fis.bufferedReader(Charsets.UTF_8)
+                if (start > 0) reader.readLine() // skip partial line at boundary
+
+                var bytesRead = start
+                while (bytesRead < end) {
+                    val line = reader.readLine() ?: break
+                    bytesRead += line.toByteArray(Charsets.UTF_8).size + 1
+                    if (line.contains("\"custom-title\"")) {
+                        try {
+                            val obj = JsonParser.parseString(line).asJsonObject
+                            return obj.get("customTitle")?.asString ?: ""
+                        } catch (_: Exception) {
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) {
+        }
+        return ""
     }
 
     /**

@@ -60,12 +60,50 @@ internal fun buildCefTerminalPageHtml(
     body.light-theme .xterm-viewport::-webkit-scrollbar-thumb:hover {
         background: rgba(0, 0, 0, 0.35);
     }
+    #loading-overlay {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #1e1e1e;
+        z-index: 1000;
+        transition: opacity 0.4s ease;
+    }
+    #loading-overlay.fade-out {
+        opacity: 0;
+        pointer-events: none;
+    }
+    .loading-content {
+        text-align: center;
+        color: rgba(255, 255, 255, 0.6);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-size: 13px;
+    }
+    .spinner {
+        width: 24px;
+        height: 24px;
+        margin: 0 auto 12px;
+        border: 2px solid rgba(255, 255, 255, 0.15);
+        border-top-color: rgba(255, 255, 255, 0.5);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
     </style>
     <style>
     $xtermCss
     </style>
     </head>
     <body>
+    <div id="loading-overlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            Loading Session...
+        </div>
+    </div>
     <div id="terminal"></div>
     <script>
     $xtermJs
@@ -110,6 +148,36 @@ internal fun buildCefTerminalPageHtml(
             term.unicode.activeVersion = '11';
         }
         term.open(document.getElementById('terminal'));
+
+        // Wait for custom font to load before fitting, otherwise xterm
+        // measures with a fallback font (wider chars) and calculates
+        // too few columns, leaving a blank strip on the right.
+        var fontReadyFit = function() {
+            // Force xterm to re-measure character cells with the loaded font
+            var currentFont = term.options.fontFamily;
+            term.options.fontFamily = 'monospace';
+            term.options.fontFamily = currentFont;
+
+            // Wait two frames for the browser to render with the new font
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() {
+                    window.fitAndRestore();
+
+                    // Dismiss loading overlay
+                    var overlay = document.getElementById('loading-overlay');
+                    if (overlay) {
+                        overlay.classList.add('fade-out');
+                        setTimeout(function() { overlay.remove(); }, 400);
+                    }
+                });
+            });
+        };
+
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(fontReadyFit);
+        } else {
+            setTimeout(fontReadyFit, 1000);
+        }
 
         var lastCols = 0;
         var lastRows = 0;

@@ -86,10 +86,6 @@ class CefTerminalPanel(
                             executeJsFocusTerminal()
                         }
                     }
-                    // Fit after load — called for all frames so the CEF viewport
-                    // has its final dimensions (main-frame onLoadEnd can fire
-                    // before the rendering surface is correctly sized).
-                    executeJs("window.fitAndRestore()")
                 }
 
                 override fun onLoadError(
