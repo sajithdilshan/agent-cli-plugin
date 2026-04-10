@@ -7,12 +7,12 @@ import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefJSQuery
 import org.cef.CefSettings
-import org.sajith.agentcli.plugin.settings.AgentCliSettings
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.handler.CefDisplayHandlerAdapter
 import org.cef.handler.CefLoadHandler
 import org.cef.handler.CefLoadHandlerAdapter
+import org.sajith.agentcli.plugin.settings.AgentCliSettings
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.util.Base64
@@ -22,12 +22,11 @@ import javax.swing.Timer
 class CefTerminalPanel(
     parentDisposable: Disposable,
     private val onInput: (String) -> Unit,
-    private val onResize: (cols: Int, rows: Int) -> Unit
+    private val onResize: (cols: Int, rows: Int) -> Unit,
 ) : Disposable {
-
     private val browser: JBCefBrowser = JBCefBrowser()
-    private val inputQuery: JBCefJSQuery
-    private val resizeQuery: JBCefJSQuery
+    private val inputQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
+    private val resizeQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
 
     @Volatile
     private var isPageLoaded = false
@@ -45,8 +44,6 @@ class CefTerminalPanel(
     val component: JComponent get() = browser.component
 
     init {
-        inputQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
-        resizeQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
 
         inputQuery.addHandler { base64Data ->
             try {
@@ -73,57 +70,75 @@ class CefTerminalPanel(
             JBCefJSQuery.Response("")
         }
 
-        browser.jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
-            override fun onLoadEnd(browser: CefBrowser, frame: CefFrame, httpStatusCode: Int) {
-                if (frame.isMain) {
-                    isPageLoaded = true
-                    applyTheme()
-                    flushPendingWrites()
-                    if (pendingFocus) {
-                        pendingFocus = false
-                        executeJsFocusTerminal()
+        browser.jbCefClient.addLoadHandler(
+            object : CefLoadHandlerAdapter() {
+                override fun onLoadEnd(
+                    browser: CefBrowser,
+                    frame: CefFrame,
+                    httpStatusCode: Int,
+                ) {
+                    if (frame.isMain) {
+                        isPageLoaded = true
+                        applyTheme()
+                        flushPendingWrites()
+                        if (pendingFocus) {
+                            pendingFocus = false
+                            executeJsFocusTerminal()
+                        }
                     }
+                    // Fit after load — called for all frames so the CEF viewport
+                    // has its final dimensions (main-frame onLoadEnd can fire
+                    // before the rendering surface is correctly sized).
+                    executeJs("window.fitAndRestore()")
                 }
-                // Fit after load — called for all frames so the CEF viewport
-                // has its final dimensions (main-frame onLoadEnd can fire
-                // before the rendering surface is correctly sized).
-                executeJs("window.fitAndRestore()")
-            }
 
-            override fun onLoadError(
-                browser: CefBrowser, frame: CefFrame,
-                errorCode: CefLoadHandler.ErrorCode,
-                errorText: String, failedUrl: String
-            ) {
-                LOG.error("[AgentCLI] CefTerminalPanel: page load error: code=$errorCode text='$errorText' url='$failedUrl'")
-            }
-        }, browser.cefBrowser)
-
-        browser.jbCefClient.addDisplayHandler(object : CefDisplayHandlerAdapter() {
-            override fun onConsoleMessage(
-                browser: CefBrowser, level: CefSettings.LogSeverity,
-                message: String, source: String, line: Int
-            ): Boolean {
-                when (level) {
-                    CefSettings.LogSeverity.LOGSEVERITY_ERROR,
-                    CefSettings.LogSeverity.LOGSEVERITY_FATAL ->
-                        LOG.error("[AgentCLI] JS: $message ($source:$line)")
-                    CefSettings.LogSeverity.LOGSEVERITY_WARNING ->
-                        LOG.warn("[AgentCLI] JS: $message ($source:$line)")
-                    else -> {}
+                override fun onLoadError(
+                    browser: CefBrowser,
+                    frame: CefFrame,
+                    errorCode: CefLoadHandler.ErrorCode,
+                    errorText: String,
+                    failedUrl: String,
+                ) {
+                    LOG.error("[AgentCLI] CefTerminalPanel: page load error: code=$errorCode text='$errorText' url='$failedUrl'")
                 }
-                return false
-            }
-        }, browser.cefBrowser)
+            },
+            browser.cefBrowser,
+        )
+
+        browser.jbCefClient.addDisplayHandler(
+            object : CefDisplayHandlerAdapter() {
+                override fun onConsoleMessage(
+                    browser: CefBrowser,
+                    level: CefSettings.LogSeverity,
+                    message: String,
+                    source: String,
+                    line: Int,
+                ): Boolean {
+                    when (level) {
+                        CefSettings.LogSeverity.LOGSEVERITY_ERROR,
+                        CefSettings.LogSeverity.LOGSEVERITY_FATAL,
+                        ->
+                            LOG.error("[AgentCLI] JS: $message ($source:$line)")
+                        CefSettings.LogSeverity.LOGSEVERITY_WARNING ->
+                            LOG.warn("[AgentCLI] JS: $message ($source:$line)")
+                        else -> {}
+                    }
+                    return false
+                }
+            },
+            browser.cefBrowser,
+        )
 
         // Listen to Swing component resize — this fires when the IDE resizes the tool window.
         // We debounce and only call JS once the resize gesture settles.
-        browser.component.addComponentListener(object : ComponentAdapter() {
-            override fun componentResized(e: ComponentEvent) {
-                if (!resizeEnabledState || !isPageLoaded) return
-                resizeDebounceTimer.restart()
-            }
-        })
+        browser.component.addComponentListener(
+            object : ComponentAdapter() {
+                override fun componentResized(e: ComponentEvent) {
+                    if (!resizeEnabledState || !isPageLoaded) return
+                    resizeDebounceTimer.restart()
+                }
+            },
+        )
 
         val html = buildTerminalHtml()
         browser.loadHTML(html)

@@ -4,16 +4,18 @@ plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "2.3.20"
     id("org.jetbrains.intellij.platform") version "2.13.1"
+    id("org.jlleitschuh.gradle.ktlint") version "12.2.0"
 }
 
 group = providers.gradleProperty("pluginGroup").get()
 version = providers.gradleProperty("pluginVersion").get()
 
 /** Machine-local defaults (gitignored); see https://plugins.jetbrains.com/docs/intellij/plugin-signing.html */
-val localProperties = Properties().apply {
-    val f = rootProject.file("local.properties")
-    if (f.isFile) f.inputStream().use(::load)
-}
+val localProperties =
+    Properties().apply {
+        val f = rootProject.file("local.properties")
+        if (f.isFile) f.inputStream().use(::load)
+    }
 
 fun signingCertificateChainFile(): String? =
     System.getenv("PLUGIN_SIGNING_CERT_CHAIN_FILE")

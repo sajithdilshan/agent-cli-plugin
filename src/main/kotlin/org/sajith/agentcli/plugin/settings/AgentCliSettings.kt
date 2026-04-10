@@ -9,15 +9,14 @@ import com.intellij.openapi.components.Storage
 @Service(Service.Level.APP)
 @State(
     name = "AgentCLISettings",
-    storages = [Storage("AgentCLIPlugin.xml")]
+    storages = [Storage("AgentCLIPlugin.xml")],
 )
 class AgentCliSettings : PersistentStateComponent<AgentCliSettings.State> {
-
     data class State(
         var claudeCommand: String = "claude",
         var cursorCommand: String = "agent",
         var geminiCommand: String = "gemini",
-        var terminalFontSize: Int = 13
+        var terminalFontSize: Int = 13,
     )
 
     private var state = State()
@@ -30,22 +29,29 @@ class AgentCliSettings : PersistentStateComponent<AgentCliSettings.State> {
 
     var claudeCommand: String
         get() = state.claudeCommand
-        set(value) { state.claudeCommand = value }
+        set(value) {
+            state.claudeCommand = value
+        }
 
     var cursorCommand: String
         get() = state.cursorCommand
-        set(value) { state.cursorCommand = value }
+        set(value) {
+            state.cursorCommand = value
+        }
 
     var geminiCommand: String
         get() = state.geminiCommand
-        set(value) { state.geminiCommand = value }
+        set(value) {
+            state.geminiCommand = value
+        }
 
     var terminalFontSize: Int
         get() = state.terminalFontSize
-        set(value) { state.terminalFontSize = value }
+        set(value) {
+            state.terminalFontSize = value
+        }
 
     companion object {
-        fun getInstance(): AgentCliSettings =
-            ApplicationManager.getApplication().getService(AgentCliSettings::class.java)
+        fun getInstance(): AgentCliSettings = ApplicationManager.getApplication().getService(AgentCliSettings::class.java)
     }
 }

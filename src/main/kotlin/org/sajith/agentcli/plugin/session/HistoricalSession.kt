@@ -10,17 +10,18 @@ data class HistoricalSession(
     val firstMessage: String,
     val timestamp: LocalDateTime,
     val messageCount: Int,
-    val agentType: AgentType = AgentType.CLAUDE
+    val agentType: AgentType = AgentType.CLAUDE,
 ) {
     val displayName: String
         get() {
             if (customTitle.isNotBlank()) return customTitle
 
-            val preview = firstMessage
-                .replace("\n", " ")
-                .trim()
-                .take(60)
-                .let { if (firstMessage.length > 60) "$it..." else it }
+            val preview =
+                firstMessage
+                    .replace("\n", " ")
+                    .trim()
+                    .take(60)
+                    .let { if (firstMessage.length > 60) "$it..." else it }
             return preview.ifEmpty { "Session ${sessionId.take(8)}" }
         }
 

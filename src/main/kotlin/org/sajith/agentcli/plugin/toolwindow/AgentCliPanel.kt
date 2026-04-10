@@ -9,8 +9,8 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.ui.OnePixelSplitter
 import org.sajith.agentcli.plugin.AgentType
 import org.sajith.agentcli.plugin.session.AgentCliSession
-import org.sajith.agentcli.plugin.session.SessionManager
 import org.sajith.agentcli.plugin.session.SessionHistoryDeleter
+import org.sajith.agentcli.plugin.session.SessionManager
 import org.sajith.agentcli.plugin.settings.AgentCliSettings
 import org.sajith.agentcli.plugin.terminal.CefTerminalPanel
 import org.sajith.agentcli.plugin.terminal.PtyBridge
@@ -20,9 +20,8 @@ import javax.swing.JPanel
 
 class AgentCliPanel(
     private val project: Project,
-    private val parentDisposable: Disposable
+    private val parentDisposable: Disposable,
 ) : JPanel(BorderLayout()) {
-
     private val sessionManager = SessionManager.getInstance(project)
     private val terminalCardLayout = CardLayout()
     private val terminalPanel = JPanel(terminalCardLayout)
@@ -30,15 +29,16 @@ class AgentCliPanel(
     private val ptyBridges = mutableMapOf<String, PtyBridge>()
     private var activeSessionId: String? = null
 
-    private val sidebar = SessionSidebarPanel(
-        project = project,
-        onNewSession = { agentType -> createNewSession(agentType) },
-        onSessionSelected = { session -> switchToSession(session) },
-        onSessionClosed = { session -> closeSession(session) },
-        onSessionDeleted = { session -> deleteSession(session) },
-        onResumeSession = { agentType, sessionId, title -> resumeSession(agentType, sessionId, title) },
-        onHistorySessionDeleted = { historicalSession -> deleteHistorySession(historicalSession) }
-    )
+    private val sidebar =
+        SessionSidebarPanel(
+            project = project,
+            onNewSession = { agentType -> createNewSession(agentType) },
+            onSessionSelected = { session -> switchToSession(session) },
+            onSessionClosed = { session -> closeSession(session) },
+            onSessionDeleted = { session -> deleteSession(session) },
+            onResumeSession = { agentType, sessionId, title -> resumeSession(agentType, sessionId, title) },
+            onHistorySessionDeleted = { historicalSession -> deleteHistorySession(historicalSession) },
+        )
 
     private val splitter = OnePixelSplitter(false, 0.2f)
     private var savedProportion = 0.2f
@@ -58,9 +58,12 @@ class AgentCliPanel(
 
         // Keep embedded terminals in sync when the IDE LaF / editor colors change.
         project.messageBus.connect(parentDisposable)
-            .subscribe(LafManagerListener.TOPIC, LafManagerListener {
-                terminalPanels.values.forEach { it.applyTheme() }
-            })
+            .subscribe(
+                LafManagerListener.TOPIC,
+                LafManagerListener {
+                    terminalPanels.values.forEach { it.applyTheme() }
+                },
+            )
     }
 
     fun createNewSession(agentType: AgentType = AgentType.CLAUDE) {
@@ -69,7 +72,11 @@ class AgentCliPanel(
         createTerminalForSession(session, cmd)
     }
 
-    private fun resumeSession(agentType: AgentType, sessionId: String, title: String?) {
+    private fun resumeSession(
+        agentType: AgentType,
+        sessionId: String,
+        title: String?,
+    ) {
         val cmd = getCommand(agentType)
         val session = sessionManager.createSession(title, agentType = agentType, agentSessionId = sessionId)
         createTerminalForSession(session, "$cmd --resume $sessionId")
@@ -84,16 +91,20 @@ class AgentCliPanel(
         }
     }
 
-    private fun createTerminalForSession(session: AgentCliSession, command: String) {
+    private fun createTerminalForSession(
+        session: AgentCliSession,
+        command: String,
+    ) {
         val workingDir = project.basePath ?: System.getProperty("user.home")
 
         lateinit var ptyBridge: PtyBridge
 
-        val cefPanel = CefTerminalPanel(
-            parentDisposable = parentDisposable,
-            onInput = { data -> ptyBridge.write(data) },
-            onResize = { cols, rows -> ptyBridge.resize(cols, rows) }
-        )
+        val cefPanel =
+            CefTerminalPanel(
+                parentDisposable = parentDisposable,
+                onInput = { data -> ptyBridge.write(data) },
+                onResize = { cols, rows -> ptyBridge.resize(cols, rows) },
+            )
 
         val shellCommand = shellInvocation()
 
@@ -101,13 +112,14 @@ class AgentCliPanel(
         env["TERM"] = "xterm-256color"
         env["COLORTERM"] = "truecolor"
 
-        ptyBridge = PtyBridge(
-            command = shellCommand,
-            workingDirectory = workingDir,
-            environment = env,
-            onOutput = { data -> cefPanel.writeToTerminal(data) },
-            onExit = { }
-        )
+        ptyBridge =
+            PtyBridge(
+                command = shellCommand,
+                workingDirectory = workingDir,
+                environment = env,
+                onOutput = { data -> cefPanel.writeToTerminal(data) },
+                onExit = { },
+            )
 
         terminalPanels[session.id] = cefPanel
         ptyBridges[session.id] = ptyBridge
@@ -218,7 +230,7 @@ class AgentCliPanel(
             SessionHistoryDeleter.deleteSession(
                 historicalSession.sessionId,
                 historicalSession.agentType,
-                projectPath
+                projectPath,
             )
         }
     }

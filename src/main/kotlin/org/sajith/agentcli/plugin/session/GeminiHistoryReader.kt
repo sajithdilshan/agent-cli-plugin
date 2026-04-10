@@ -8,7 +8,6 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 object GeminiHistoryReader {
-
     private val LOG = Logger.getInstance(GeminiHistoryReader::class.java)
 
     fun readHistory(projectPath: String): List<HistoricalSession> {
@@ -36,7 +35,10 @@ object GeminiHistoryReader {
         return sessions.sortedByDescending { it.timestamp }
     }
 
-    private fun resolveProjectName(geminiDir: File, projectPath: String): String? {
+    private fun resolveProjectName(
+        geminiDir: File,
+        projectPath: String,
+    ): String? {
         val projectsFile = geminiDir.resolve("projects.json")
         if (!projectsFile.exists()) return null
 
@@ -79,7 +81,7 @@ object GeminiHistoryReader {
             customTitle = "",
             firstMessage = firstUserMessage,
             timestamp = startTime,
-            messageCount = messageCount
+            messageCount = messageCount,
         )
     }
 

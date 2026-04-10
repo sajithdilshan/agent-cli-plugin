@@ -11,7 +11,6 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopupFactory
-import java.util.concurrent.CompletableFuture
 import com.intellij.ui.JBColor
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBList
@@ -34,6 +33,7 @@ import java.awt.event.MouseEvent
 import java.time.LocalDate
 import java.time.temporal.WeekFields
 import java.util.Locale
+import java.util.concurrent.CompletableFuture
 import javax.swing.DefaultListModel
 import javax.swing.JComponent
 import javax.swing.JLabel
@@ -49,6 +49,7 @@ import javax.swing.border.MatteBorder
  */
 private sealed class SidebarItem {
     data class Header(val title: String) : SidebarItem()
+
     data class HistoryEntry(val session: HistoricalSession) : SidebarItem()
 }
 
@@ -59,9 +60,8 @@ class SessionSidebarPanel(
     private val onSessionClosed: (AgentCliSession) -> Unit,
     private val onSessionDeleted: (AgentCliSession) -> Unit,
     private val onResumeSession: (agentType: AgentType, sessionId: String, title: String?) -> Unit,
-    private val onHistorySessionDeleted: (HistoricalSession) -> Unit
+    private val onHistorySessionDeleted: (HistoricalSession) -> Unit,
 ) : JPanel(BorderLayout()) {
-
     private val activeSessionListModel = DefaultListModel<AgentCliSession>()
     private val activeSessionList = JBList(activeSessionListModel)
     private var selectedSession: AgentCliSession? = null
@@ -81,12 +81,13 @@ class SessionSidebarPanel(
 
         add(createIconStrip(), BorderLayout.WEST)
 
-        sessionListPanel = JPanel(BorderLayout()).apply {
-            background = JBColor.PanelBackground
-            border = MatteBorder(0, 0, 0, 1, JBColor.border())
-            add(createActiveSessionList(), BorderLayout.NORTH)
-            add(createHistoryList(), BorderLayout.CENTER)
-        }
+        sessionListPanel =
+            JPanel(BorderLayout()).apply {
+                background = JBColor.PanelBackground
+                border = MatteBorder(0, 0, 0, 1, JBColor.border())
+                add(createActiveSessionList(), BorderLayout.NORTH)
+                add(createHistoryList(), BorderLayout.CENTER)
+            }
         add(sessionListPanel, BorderLayout.CENTER)
 
         // Defer history loading until the panel is actually shown
@@ -101,53 +102,71 @@ class SessionSidebarPanel(
     }
 
     private fun createIconStrip(): JComponent {
-        val group = DefaultActionGroup().apply {
-            add(object : AnAction("New Session", "Create a new session", AllIcons.General.Add) {
-                override fun actionPerformed(e: AnActionEvent) {
-                    showAgentTypePopup(e) { agentType -> onNewSession(agentType) }
-                }
-            })
-            add(object : AnAction("Refresh History", "Reload session history", AllIcons.Actions.Refresh) {
-                override fun actionPerformed(e: AnActionEvent) {
-                    loadHistory()
-                }
-            })
-            add(object : AnAction(
-                "Toggle Sessions Panel",
-                "Show or hide the sessions panel",
-                AllIcons.Actions.ArrowCollapse
-            ) {
-                override fun actionPerformed(e: AnActionEvent) {
-                    isCollapsed = !isCollapsed
-                    sessionListPanel.isVisible = !isCollapsed
-                    e.presentation.icon =
-                        if (isCollapsed) AllIcons.Actions.ArrowExpand else AllIcons.Actions.ArrowCollapse
-                    onCollapseToggle?.invoke(isCollapsed)
-                }
-            })
-        }
-        val toolbar = ActionManager.getInstance()
-            .createActionToolbar(ActionPlaces.TOOLWINDOW_CONTENT, group, false)
+        val group =
+            DefaultActionGroup().apply {
+                add(
+                    object : AnAction("New Session", "Create a new session", AllIcons.General.Add) {
+                        override fun actionPerformed(e: AnActionEvent) {
+                            showAgentTypePopup(e) { agentType -> onNewSession(agentType) }
+                        }
+                    },
+                )
+                add(
+                    object : AnAction("Refresh History", "Reload session history", AllIcons.Actions.Refresh) {
+                        override fun actionPerformed(e: AnActionEvent) {
+                            loadHistory()
+                        }
+                    },
+                )
+                add(
+                    object : AnAction(
+                        "Toggle Sessions Panel",
+                        "Show or hide the sessions panel",
+                        AllIcons.Actions.ArrowCollapse,
+                    ) {
+                        override fun actionPerformed(e: AnActionEvent) {
+                            isCollapsed = !isCollapsed
+                            sessionListPanel.isVisible = !isCollapsed
+                            e.presentation.icon =
+                                if (isCollapsed) AllIcons.Actions.ArrowExpand else AllIcons.Actions.ArrowCollapse
+                            onCollapseToggle?.invoke(isCollapsed)
+                        }
+                    },
+                )
+            }
+        val toolbar =
+            ActionManager.getInstance()
+                .createActionToolbar(ActionPlaces.TOOLWINDOW_CONTENT, group, false)
         toolbar.targetComponent = this
         toolbar.component.border = MatteBorder(0, 0, 0, 1, JBColor.border())
         return toolbar.component
     }
 
-    private fun showAgentTypePopup(e: AnActionEvent, onSelected: (AgentType) -> Unit) {
-        val group = DefaultActionGroup().apply {
-            AgentType.entries.forEach { agentType ->
-                add(object : AnAction(agentType.displayName) {
-                    override fun actionPerformed(e: AnActionEvent) {
-                        onSelected(agentType)
-                    }
-                })
+    private fun showAgentTypePopup(
+        e: AnActionEvent,
+        onSelected: (AgentType) -> Unit,
+    ) {
+        val group =
+            DefaultActionGroup().apply {
+                AgentType.entries.forEach { agentType ->
+                    add(
+                        object : AnAction(agentType.displayName) {
+                            override fun actionPerformed(e: AnActionEvent) {
+                                onSelected(agentType)
+                            }
+                        },
+                    )
+                }
             }
-        }
         val component = e.inputEvent?.component ?: this
-        val popup = JBPopupFactory.getInstance().createActionGroupPopup(
-            null, group, DataManager.getInstance().getDataContext(component),
-            JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, false
-        )
+        val popup =
+            JBPopupFactory.getInstance().createActionGroupPopup(
+                null,
+                group,
+                DataManager.getInstance().getDataContext(component),
+                JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
+                false,
+            )
         popup.showUnderneathOf(component)
     }
 
@@ -168,43 +187,48 @@ class SessionSidebarPanel(
                     }
                 }
             }
-            addMouseListener(object : MouseAdapter() {
-                override fun mouseClicked(e: MouseEvent) {
-                    if (SwingUtilities.isMiddleMouseButton(e)) {
-                        val index = activeSessionList.locationToIndex(e.point)
-                        if (index >= 0) {
-                            val cellBounds = activeSessionList.getCellBounds(index, index)
-                            if (cellBounds != null && cellBounds.contains(e.point)) {
+            addMouseListener(
+                object : MouseAdapter() {
+                    override fun mouseClicked(e: MouseEvent) {
+                        if (SwingUtilities.isMiddleMouseButton(e)) {
+                            val index = activeSessionList.locationToIndex(e.point)
+                            if (index >= 0) {
+                                val cellBounds = activeSessionList.getCellBounds(index, index)
+                                if (cellBounds != null && cellBounds.contains(e.point)) {
+                                    onSessionClosed(activeSessionListModel.getElementAt(index))
+                                }
+                            }
+                        }
+                        if (SwingUtilities.isLeftMouseButton(e)) {
+                            val index = activeSessionList.locationToIndex(e.point)
+                            if (index < 0) return
+                            val cellBounds = activeSessionList.getCellBounds(index, index) ?: return
+                            if (!cellBounds.contains(e.point)) return
+                            // Close button is on the right edge (~16px)
+                            val relativeX = e.x - cellBounds.x
+                            if (relativeX >= cellBounds.width - JBUI.scale(24)) {
                                 onSessionClosed(activeSessionListModel.getElementAt(index))
                             }
                         }
                     }
-                    if (SwingUtilities.isLeftMouseButton(e)) {
-                        val index = activeSessionList.locationToIndex(e.point)
-                        if (index < 0) return
-                        val cellBounds = activeSessionList.getCellBounds(index, index) ?: return
-                        if (!cellBounds.contains(e.point)) return
-                        // Close button is on the right edge (~16px)
-                        val relativeX = e.x - cellBounds.x
-                        if (relativeX >= cellBounds.width - JBUI.scale(24)) {
-                            onSessionClosed(activeSessionListModel.getElementAt(index))
-                        }
+
+                    override fun mousePressed(e: MouseEvent) {
+                        if (e.isPopupTrigger) showActiveSessionContextMenu(e)
                     }
-                }
-                override fun mousePressed(e: MouseEvent) {
-                    if (e.isPopupTrigger) showActiveSessionContextMenu(e)
-                }
-                override fun mouseReleased(e: MouseEvent) {
-                    if (e.isPopupTrigger) showActiveSessionContextMenu(e)
-                }
-            })
+
+                    override fun mouseReleased(e: MouseEvent) {
+                        if (e.isPopupTrigger) showActiveSessionContextMenu(e)
+                    }
+                },
+            )
         }
 
-        val header = JLabel("Active Sessions").apply {
-            font = font.deriveFont(Font.BOLD, JBUI.Fonts.smallFont().size2D)
-            foreground = JBColor.GRAY
-            border = JBUI.Borders.empty(8, 8, 4, 8)
-        }
+        val header =
+            JLabel("Active Sessions").apply {
+                font = font.deriveFont(Font.BOLD, JBUI.Fonts.smallFont().size2D)
+                foreground = JBColor.GRAY
+                border = JBUI.Borders.empty(8, 8, 4, 8)
+            }
 
         return JPanel(BorderLayout()).apply {
             isOpaque = false
@@ -222,22 +246,31 @@ class SessionSidebarPanel(
         activeSessionList.selectedIndex = index
         val session = activeSessionListModel.getElementAt(index)
 
-        val group = DefaultActionGroup().apply {
-            add(object : AnAction("Close Session", "Close this session", AllIcons.Actions.Close) {
-                override fun actionPerformed(e: AnActionEvent) {
-                    onSessionClosed(session)
-                }
-            })
-            add(object : AnAction("Delete Session", "Close and delete session history", AllIcons.Actions.GC) {
-                override fun actionPerformed(e: AnActionEvent) {
-                    onSessionDeleted(session)
-                }
-            })
-        }
-        val popup = JBPopupFactory.getInstance().createActionGroupPopup(
-            null, group, DataManager.getInstance().getDataContext(activeSessionList),
-            JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, false
-        )
+        val group =
+            DefaultActionGroup().apply {
+                add(
+                    object : AnAction("Close Session", "Close this session", AllIcons.Actions.Close) {
+                        override fun actionPerformed(e: AnActionEvent) {
+                            onSessionClosed(session)
+                        }
+                    },
+                )
+                add(
+                    object : AnAction("Delete Session", "Close and delete session history", AllIcons.Actions.GC) {
+                        override fun actionPerformed(e: AnActionEvent) {
+                            onSessionDeleted(session)
+                        }
+                    },
+                )
+            }
+        val popup =
+            JBPopupFactory.getInstance().createActionGroupPopup(
+                null,
+                group,
+                DataManager.getInstance().getDataContext(activeSessionList),
+                JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
+                false,
+            )
         popup.show(RelativePoint(e))
     }
 
@@ -253,18 +286,25 @@ class SessionSidebarPanel(
         historyList.selectedIndex = index
         val session = item.session
 
-        val group = DefaultActionGroup().apply {
-            add(object : AnAction("Delete Session", "Delete session history", AllIcons.Actions.GC) {
-                override fun actionPerformed(e: AnActionEvent) {
-                    onHistorySessionDeleted(session)
-                    historyListModel.removeElementAt(index)
-                }
-            })
-        }
-        val popup = JBPopupFactory.getInstance().createActionGroupPopup(
-            null, group, DataManager.getInstance().getDataContext(historyList),
-            JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, false
-        )
+        val group =
+            DefaultActionGroup().apply {
+                add(
+                    object : AnAction("Delete Session", "Delete session history", AllIcons.Actions.GC) {
+                        override fun actionPerformed(e: AnActionEvent) {
+                            onHistorySessionDeleted(session)
+                            historyListModel.removeElementAt(index)
+                        }
+                    },
+                )
+            }
+        val popup =
+            JBPopupFactory.getInstance().createActionGroupPopup(
+                null,
+                group,
+                DataManager.getInstance().getDataContext(historyList),
+                JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
+                false,
+            )
         popup.show(RelativePoint(e))
     }
 
@@ -276,36 +316,40 @@ class SessionSidebarPanel(
             minimumSize = Dimension(0, 0)
             cellRenderer = HistorySidebarCellRenderer()
             background = JBColor.PanelBackground
-            addMouseListener(object : MouseAdapter() {
-                override fun mouseClicked(e: MouseEvent) {
-                    if (!SwingUtilities.isLeftMouseButton(e)) return
-                    val index = historyList.locationToIndex(e.point)
-                    if (index < 0) return
-                    val cellBounds = historyList.getCellBounds(index, index)
-                    if (cellBounds == null || !cellBounds.contains(e.point)) return
+            addMouseListener(
+                object : MouseAdapter() {
+                    override fun mouseClicked(e: MouseEvent) {
+                        if (!SwingUtilities.isLeftMouseButton(e)) return
+                        val index = historyList.locationToIndex(e.point)
+                        if (index < 0) return
+                        val cellBounds = historyList.getCellBounds(index, index)
+                        if (cellBounds == null || !cellBounds.contains(e.point)) return
 
-                    when (val item = historyListModel.getElementAt(index)) {
-                        is SidebarItem.Header -> historyList.clearSelection()
-                        is SidebarItem.HistoryEntry -> {
-                            activeSessionList.clearSelection()
-                            val session = item.session
-                            onResumeSession(
-                                session.agentType,
-                                session.sessionId,
-                                session.displayName
-                            )
-                            // Refresh history so resumed session moves to active
-                            loadHistory()
+                        when (val item = historyListModel.getElementAt(index)) {
+                            is SidebarItem.Header -> historyList.clearSelection()
+                            is SidebarItem.HistoryEntry -> {
+                                activeSessionList.clearSelection()
+                                val session = item.session
+                                onResumeSession(
+                                    session.agentType,
+                                    session.sessionId,
+                                    session.displayName,
+                                )
+                                // Refresh history so resumed session moves to active
+                                loadHistory()
+                            }
                         }
                     }
-                }
-                override fun mousePressed(e: MouseEvent) {
-                    if (e.isPopupTrigger) showHistoryContextMenu(e)
-                }
-                override fun mouseReleased(e: MouseEvent) {
-                    if (e.isPopupTrigger) showHistoryContextMenu(e)
-                }
-            })
+
+                    override fun mousePressed(e: MouseEvent) {
+                        if (e.isPopupTrigger) showHistoryContextMenu(e)
+                    }
+
+                    override fun mouseReleased(e: MouseEvent) {
+                        if (e.isPopupTrigger) showHistoryContextMenu(e)
+                    }
+                },
+            )
         }
 
         return JBScrollPane(historyList).apply {
@@ -322,11 +366,7 @@ class SessionSidebarPanel(
     fun loadHistory() {
         val projectPath = project.basePath ?: return
 
-        LOG.info("[AgentCLI] loadHistory() called on thread: ${Thread.currentThread().name}")
-
         ApplicationManager.getApplication().executeOnPooledThread {
-            val startTime = System.currentTimeMillis()
-            LOG.info("[AgentCLI] loadHistory background work START")
             try {
                 val openIds = mutableSetOf<String>()
                 AgentType.entries.forEach { agentType ->
@@ -334,30 +374,32 @@ class SessionSidebarPanel(
                 }
 
                 // Read all agents in parallel
-                val futures = AgentType.entries.map { agentType ->
-                    CompletableFuture.supplyAsync {
-                        val agentStart = System.currentTimeMillis()
-                        try {
-                            val result = when (agentType) {
-                                AgentType.CLAUDE -> ClaudeCodeHistoryReader.readHistory(projectPath)
-                                AgentType.CURSOR -> CursorHistoryReader.readHistory(projectPath)
-                                AgentType.GEMINI -> GeminiHistoryReader.readHistory(projectPath)
-                            }.map { it.copy(agentType = agentType) }
-                            LOG.info("[AgentCLI] ${agentType.displayName} history: ${result.size} entries in ${System.currentTimeMillis() - agentStart}ms")
-                            result
-                        } catch (e: Exception) {
-                            LOG.warn("Failed to read ${agentType.displayName} history in ${System.currentTimeMillis() - agentStart}ms", e)
-                            emptyList()
+                val futures =
+                    AgentType.entries.map { agentType ->
+                        CompletableFuture.supplyAsync {
+                            try {
+                                val result =
+                                    when (agentType) {
+                                        AgentType.CLAUDE -> ClaudeCodeHistoryReader.readHistory(projectPath)
+                                        AgentType.CURSOR -> CursorHistoryReader.readHistory(projectPath)
+                                        AgentType.GEMINI -> GeminiHistoryReader.readHistory(projectPath)
+                                    }.map { it.copy(agentType = agentType) }
+                                result
+                            } catch (e: Exception) {
+                                LOG.warn(
+                                    "Failed to read ${agentType.displayName} history",
+                                    e,
+                                )
+                                emptyList()
+                            }
                         }
                     }
-                }
 
                 val allHistory = futures.flatMap { it.join() }
-                LOG.info("[AgentCLI] All history readers done: ${allHistory.size} total entries in ${System.currentTimeMillis() - startTime}ms")
-
-                val filtered = allHistory
-                    .filter { it.sessionId !in openIds }
-                    .sortedByDescending { it.timestamp }
+                val filtered =
+                    allHistory
+                        .filter { it.sessionId !in openIds }
+                        .sortedByDescending { it.timestamp }
 
                 val grouped = groupByDate(filtered)
 
@@ -367,7 +409,6 @@ class SessionSidebarPanel(
                         historyListModel.addElement(SidebarItem.Header(header))
                         sessions.forEach { historyListModel.addElement(SidebarItem.HistoryEntry(it)) }
                     }
-                    LOG.info("[AgentCLI] loadHistory UI updated: ${filtered.size} entries displayed, total time ${System.currentTimeMillis() - startTime}ms")
                 }
             } catch (e: Exception) {
                 LOG.warn("Failed to load history", e)
@@ -384,12 +425,13 @@ class SessionSidebarPanel(
 
         for (session in sessions) {
             val date = session.timestamp.toLocalDate()
-            val group = when {
-                date == today -> "Today"
-                date == yesterday -> "Yesterday"
-                !date.isBefore(startOfWeek) -> "This Week"
-                else -> "Older"
-            }
+            val group =
+                when {
+                    date == today -> "Today"
+                    date == yesterday -> "Yesterday"
+                    !date.isBefore(startOfWeek) -> "This Week"
+                    else -> "Older"
+                }
             groups.getOrPut(group) { mutableListOf() }.add(session)
         }
 
@@ -435,7 +477,7 @@ class SessionSidebarPanel(
             value: AgentCliSession,
             index: Int,
             isSelected: Boolean,
-            cellHasFocus: Boolean
+            cellHasFocus: Boolean,
         ): Component {
             val bg = if (isSelected) list.selectionBackground else list.background
             val fg = if (isSelected) list.selectionForeground else list.foreground
@@ -445,39 +487,45 @@ class SessionSidebarPanel(
                 border = JBUI.Borders.empty(4, 8, 4, 4)
                 minimumSize = Dimension(0, 0)
 
-                val iconLabel = JLabel(AllIcons.Actions.Execute).apply {
-                    border = JBUI.Borders.emptyRight(4)
-                }
+                val iconLabel =
+                    JLabel(AllIcons.Actions.Execute).apply {
+                        border = JBUI.Borders.emptyRight(4)
+                    }
 
-                val nameLabel = JLabel(value.displayName).apply {
-                    foreground = fg
-                    font = list.font
-                }
+                val nameLabel =
+                    JLabel(value.displayName).apply {
+                        foreground = fg
+                        font = list.font
+                    }
 
-                val agentLabel = JLabel(value.agentType.displayName).apply {
-                    foreground = JBColor.GRAY
-                    font = JBUI.Fonts.smallFont()
-                }
+                val agentLabel =
+                    JLabel(value.agentType.displayName).apply {
+                        foreground = JBColor.GRAY
+                        font = JBUI.Fonts.smallFont()
+                    }
 
-                val textPanel = JPanel(BorderLayout()).apply {
-                    isOpaque = false
-                    minimumSize = Dimension(0, 0)
-                    add(nameLabel, BorderLayout.CENTER)
-                    add(agentLabel, BorderLayout.SOUTH)
-                }
+                val textPanel =
+                    JPanel(BorderLayout()).apply {
+                        isOpaque = false
+                        minimumSize = Dimension(0, 0)
+                        add(nameLabel, BorderLayout.CENTER)
+                        add(agentLabel, BorderLayout.SOUTH)
+                    }
 
-                val leftPanel = JPanel(BorderLayout()).apply {
-                    isOpaque = false
-                    minimumSize = Dimension(0, 0)
-                    add(iconLabel, BorderLayout.WEST)
-                    add(textPanel, BorderLayout.CENTER)
-                }
+                val leftPanel =
+                    JPanel(BorderLayout()).apply {
+                        isOpaque = false
+                        minimumSize = Dimension(0, 0)
+                        add(iconLabel, BorderLayout.WEST)
+                        add(textPanel, BorderLayout.CENTER)
+                    }
 
-                val closeLabel = JLabel(AllIcons.Actions.Close).apply {
-                    preferredSize = Dimension(closeIconSize, closeIconSize)
-                    toolTipText = "Close session"
-                    cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-                }
+                val closeLabel =
+                    JLabel(AllIcons.Actions.Close).apply {
+                        preferredSize = Dimension(closeIconSize, closeIconSize)
+                        toolTipText = "Close session"
+                        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+                    }
 
                 add(leftPanel, BorderLayout.CENTER)
                 add(closeLabel, BorderLayout.EAST)
@@ -491,17 +539,22 @@ class SessionSidebarPanel(
             value: SidebarItem,
             index: Int,
             isSelected: Boolean,
-            cellHasFocus: Boolean
+            cellHasFocus: Boolean,
         ): Component {
             return when (value) {
-                is SidebarItem.Header -> JPanel(BorderLayout()).apply {
-                    background = list.background
-                    border = JBUI.Borders.empty(8, 8, 4, 8)
-                    add(JLabel(value.title).apply {
-                        font = font.deriveFont(Font.BOLD, JBUI.Fonts.smallFont().size2D)
-                        foreground = JBColor.GRAY
-                    }, BorderLayout.WEST)
-                }
+                is SidebarItem.Header ->
+                    JPanel(BorderLayout()).apply {
+                        background = list.background
+                        border = JBUI.Borders.empty(8, 8, 4, 8)
+                        add(
+                            JLabel(value.title).apply {
+                                font = font.deriveFont(Font.BOLD, JBUI.Fonts.smallFont().size2D)
+                                foreground = JBColor.GRAY
+                            },
+                            BorderLayout.WEST,
+                        )
+                    }
+
                 is SidebarItem.HistoryEntry -> {
                     val session = value.session
                     val bg = if (isSelected) list.selectionBackground else list.background
@@ -512,11 +565,12 @@ class SessionSidebarPanel(
                         border = JBUI.Borders.empty(4, 8, 4, 8)
                         minimumSize = Dimension(0, 0)
 
-                        val titleLabel = JLabel(session.displayName).apply {
-                            foreground = fg
-                            font = list.font
-                            minimumSize = Dimension(0, preferredSize.height)
-                        }
+                        val titleLabel =
+                            JLabel(session.displayName).apply {
+                                foreground = fg
+                                font = list.font
+                                minimumSize = Dimension(0, preferredSize.height)
+                            }
 
                         val metaParts = mutableListOf(session.agentType.displayName)
                         val date = session.timestamp.toLocalDate()
@@ -524,10 +578,11 @@ class SessionSidebarPanel(
                         if (date != today && date != today.minusDays(1)) {
                             metaParts.add(session.formattedTime)
                         }
-                        val metaLabel = JLabel(metaParts.joinToString("  ·  ")).apply {
-                            foreground = JBColor.GRAY
-                            font = JBUI.Fonts.smallFont()
-                        }
+                        val metaLabel =
+                            JLabel(metaParts.joinToString("  ·  ")).apply {
+                                foreground = JBColor.GRAY
+                                font = JBUI.Fonts.smallFont()
+                            }
 
                         add(titleLabel, BorderLayout.CENTER)
                         add(metaLabel, BorderLayout.SOUTH)

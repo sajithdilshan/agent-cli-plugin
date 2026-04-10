@@ -8,7 +8,6 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 object CursorHistoryReader {
-
     private val LOG = Logger.getInstance(CursorHistoryReader::class.java)
     private val USER_QUERY_REGEX = Regex("<user_query>\\s*(.*?)\\s*</user_query>", RegexOption.DOT_MATCHES_ALL)
 
@@ -40,7 +39,10 @@ object CursorHistoryReader {
         return sessions.sortedByDescending { it.timestamp }
     }
 
-    private fun resolveProjectDirectory(cursorDir: File, encodedPath: String): File? {
+    private fun resolveProjectDirectory(
+        cursorDir: File,
+        encodedPath: String,
+    ): File? {
         val direct = cursorDir.resolve(encodedPath)
         if (direct.exists() && direct.isDirectory) return direct
 
@@ -83,7 +85,7 @@ object CursorHistoryReader {
             customTitle = "",
             firstMessage = firstUserMessage,
             timestamp = ts,
-            messageCount = messageCount
+            messageCount = messageCount,
         )
     }
 

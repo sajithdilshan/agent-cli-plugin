@@ -9,7 +9,6 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 object ClaudeCodeHistoryReader {
-
     private val LOG = Logger.getInstance(ClaudeCodeHistoryReader::class.java)
 
     fun readHistory(projectPath: String): List<HistoricalSession> {
@@ -39,7 +38,10 @@ object ClaudeCodeHistoryReader {
         return sessions.sortedByDescending { it.timestamp }
     }
 
-    private fun resolveProjectHistoryDirectory(claudeDir: File, encodedPath: String): File? {
+    private fun resolveProjectHistoryDirectory(
+        claudeDir: File,
+        encodedPath: String,
+    ): File? {
         val direct = claudeDir.resolve(encodedPath)
         if (direct.exists() && direct.isDirectory) return direct
 
@@ -50,49 +52,51 @@ object ClaudeCodeHistoryReader {
      * Lightweight parse: reads only the first few lines to extract title and first user message.
      * Uses file modification time as timestamp to avoid scanning deep into large files.
      */
-    private fun parseSessionFile(file: File): HistoricalSession? {
+    private fun parseSessionFile(file: File): HistoricalSession {
         val sessionId = file.nameWithoutExtension
         var customTitle = ""
         var firstUserMessage = ""
-        var linesScanned = 0
 
         file.bufferedReader().useLines { lines ->
             for (line in lines) {
                 if (line.isBlank()) continue
-                linesScanned++
-                try {
-                    val obj = JsonParser.parseString(line).asJsonObject
-                    val type = obj.get("type")?.asString ?: continue
 
-                    if (type == "custom-title" && customTitle.isEmpty()) {
+                // Cheap string check before expensive JSON parse
+                if (customTitle.isEmpty() && line.contains("\"custom-title\"")) {
+                    try {
+                        val obj = JsonParser.parseString(line).asJsonObject
                         customTitle = obj.get("customTitle")?.asString ?: ""
+                    } catch (_: Exception) {
                     }
-
-                    if (type == "user" && firstUserMessage.isEmpty()) {
-                        firstUserMessage = extractUserMessage(obj)
-                        // Stop once we have the first user message — title usually appears before it
-                        break
-                    }
-                } catch (_: Exception) {
-                    // Skip malformed lines
                 }
 
-                // Safety cap: don't scan more than 50 lines per file
-                if (linesScanned >= 50) break
+                if (firstUserMessage.isEmpty() && line.contains("\"type\":\"user\"")) {
+                    try {
+                        val obj = JsonParser.parseString(line).asJsonObject
+                        if (obj.get("type")?.asString == "user") {
+                            firstUserMessage = extractUserMessage(obj)
+                        }
+                    } catch (_: Exception) {
+                    }
+                }
+
+                if (customTitle.isNotEmpty() && firstUserMessage.isNotEmpty()) break
             }
         }
 
         // Use file modification time — fast and avoids parsing timestamps from JSON
-        val timestamp = LocalDateTime.ofInstant(
-            Instant.ofEpochMilli(file.lastModified()), ZoneId.systemDefault()
-        )
+        val timestamp =
+            LocalDateTime.ofInstant(
+                Instant.ofEpochMilli(file.lastModified()),
+                ZoneId.systemDefault(),
+            )
 
         return HistoricalSession(
             sessionId = sessionId,
             customTitle = customTitle,
             firstMessage = firstUserMessage,
             timestamp = timestamp,
-            messageCount = 0
+            messageCount = 0,
         )
     }
 
@@ -138,19 +142,5 @@ object ClaudeCodeHistoryReader {
         }
 
         return ""
-    }
-
-    private fun parseTimestamp(ts: String): LocalDateTime? {
-        return try {
-            val instant = Instant.parse(ts)
-            LocalDateTime.ofInstant(instant, ZoneId.systemDefault())
-        } catch (_: Exception) {
-            try {
-                val millis = ts.toLong()
-                LocalDateTime.ofInstant(Instant.ofEpochMilli(millis), ZoneId.systemDefault())
-            } catch (_: Exception) {
-                null
-            }
-        }
     }
 }

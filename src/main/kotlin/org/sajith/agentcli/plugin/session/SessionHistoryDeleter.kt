@@ -6,10 +6,13 @@ import org.sajith.agentcli.plugin.AgentType
 import java.io.File
 
 object SessionHistoryDeleter {
-
     private val LOG = Logger.getInstance(SessionHistoryDeleter::class.java)
 
-    fun deleteSession(sessionId: String, agentType: AgentType, projectPath: String): Boolean {
+    fun deleteSession(
+        sessionId: String,
+        agentType: AgentType,
+        projectPath: String,
+    ): Boolean {
         return try {
             when (agentType) {
                 AgentType.CLAUDE -> deleteClaudeSession(sessionId, projectPath)
@@ -22,7 +25,10 @@ object SessionHistoryDeleter {
         }
     }
 
-    private fun deleteClaudeSession(sessionId: String, projectPath: String): Boolean {
+    private fun deleteClaudeSession(
+        sessionId: String,
+        projectPath: String,
+    ): Boolean {
         val claudeDir = File(System.getProperty("user.home"), ".claude/projects")
         if (!claudeDir.exists()) return false
 
@@ -37,7 +43,10 @@ object SessionHistoryDeleter {
         return deleted
     }
 
-    private fun deleteCursorSession(sessionId: String, projectPath: String): Boolean {
+    private fun deleteCursorSession(
+        sessionId: String,
+        projectPath: String,
+    ): Boolean {
         val cursorDir = File(System.getProperty("user.home"), ".cursor/projects")
         if (!cursorDir.exists()) return false
 
@@ -52,7 +61,10 @@ object SessionHistoryDeleter {
         return deleted
     }
 
-    private fun deleteGeminiSession(sessionId: String, projectPath: String): Boolean {
+    private fun deleteGeminiSession(
+        sessionId: String,
+        projectPath: String,
+    ): Boolean {
         val geminiDir = File(System.getProperty("user.home"), ".gemini")
         if (!geminiDir.exists()) return false
 
@@ -68,13 +80,19 @@ object SessionHistoryDeleter {
         return deleted
     }
 
-    private fun resolveDirectory(baseDir: File, encodedPath: String): File? {
+    private fun resolveDirectory(
+        baseDir: File,
+        encodedPath: String,
+    ): File? {
         val direct = baseDir.resolve(encodedPath)
         if (direct.exists() && direct.isDirectory) return direct
         return baseDir.listFiles { f -> f.isDirectory }?.firstOrNull { it.name == encodedPath }
     }
 
-    private fun resolveGeminiProjectName(geminiDir: File, projectPath: String): String? {
+    private fun resolveGeminiProjectName(
+        geminiDir: File,
+        projectPath: String,
+    ): String? {
         val projectsFile = geminiDir.resolve("projects.json")
         if (!projectsFile.exists()) return null
         return try {

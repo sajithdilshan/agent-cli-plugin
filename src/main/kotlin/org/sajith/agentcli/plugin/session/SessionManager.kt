@@ -12,20 +12,20 @@ class SessionManager {
 
     val sessions: List<AgentCliSession> get() = activeSessions.toList()
 
-    fun getOpenSessionIds(agentType: AgentType): Set<String> =
-        openSessionIds[agentType]?.toSet() ?: emptySet()
+    fun getOpenSessionIds(agentType: AgentType): Set<String> = openSessionIds[agentType]?.toSet() ?: emptySet()
 
     fun createSession(
         name: String? = null,
         agentType: AgentType = AgentType.CLAUDE,
-        agentSessionId: String? = null
+        agentSessionId: String? = null,
     ): AgentCliSession {
         sessionCounter++
-        val session = AgentCliSession(
-            name = name ?: "Session $sessionCounter",
-            agentType = agentType,
-            agentSessionId = agentSessionId
-        )
+        val session =
+            AgentCliSession(
+                name = name ?: "Session $sessionCounter",
+                agentType = agentType,
+                agentSessionId = agentSessionId,
+            )
         if (agentSessionId != null) {
             openSessionIds.getOrPut(agentType) { mutableSetOf() }.add(agentSessionId)
         }

@@ -15,56 +15,57 @@ class PtyBridge(
     private val initialCols: Int = 120,
     private val initialRows: Int = 24,
     private val onOutput: (ByteArray) -> Unit,
-    private val onExit: (exitCode: Int) -> Unit
+    private val onExit: (exitCode: Int) -> Unit,
 ) : Disposable {
-
-    private val LOG = Logger.getInstance(PtyBridge::class.java)
     private var process: PtyProcess? = null
     private var readerThread: Thread? = null
     private val isDisposed = AtomicBoolean(false)
 
     fun startWithCommand(data: String) {
-        val builder = PtyProcessBuilder(command)
-            .setDirectory(workingDirectory)
-            .setEnvironment(environment)
-            .setInitialColumns(initialCols)
-            .setInitialRows(initialRows)
-            .setConsole(false)
+        val builder =
+            PtyProcessBuilder(command)
+                .setDirectory(workingDirectory)
+                .setEnvironment(environment)
+                .setInitialColumns(initialCols)
+                .setInitialRows(initialRows)
+                .setConsole(false)
 
         process = builder.start()
 
-        readerThread = Thread({
-            val buffer = ByteArray(8192)
-            val inputStream = process!!.inputStream
-            var totalBytesRead = 0L
-            try {
-                while (!isDisposed.get()) {
-                    val bytesRead = inputStream.read(buffer)
-                    if (bytesRead == -1) {
-                        break
+        readerThread =
+            Thread({
+                val buffer = ByteArray(8192)
+                val inputStream = process!!.inputStream
+                var totalBytesRead = 0L
+                try {
+                    while (!isDisposed.get()) {
+                        val bytesRead = inputStream.read(buffer)
+                        if (bytesRead == -1) {
+                            break
+                        }
+                        totalBytesRead += bytesRead
+                        val chunk = buffer.copyOf(bytesRead)
+                        onOutput(chunk)
                     }
-                    totalBytesRead += bytesRead
-                    val chunk = buffer.copyOf(bytesRead)
-                    onOutput(chunk)
-                }
-            } catch (e: Exception) {
-                if (!isDisposed.get()) {
-                    LOG.warn("[AgentCLI] PtyBridge: reader thread error after $totalBytesRead total bytes", e)
-                }
-            } finally {
-                if (!isDisposed.get()) {
-                    val exitCode = try {
-                        process!!.waitFor()
-                    } catch (_: Exception) {
-                        -1
+                } catch (e: Exception) {
+                    if (!isDisposed.get()) {
+                        LOG.warn("[AgentCLI] PtyBridge: reader thread error after $totalBytesRead total bytes", e)
                     }
-                    onExit(exitCode)
+                } finally {
+                    if (!isDisposed.get()) {
+                        val exitCode =
+                            try {
+                                process!!.waitFor()
+                            } catch (_: Exception) {
+                                -1
+                            }
+                        onExit(exitCode)
+                    }
                 }
+            }, "AgentCLI-PTY-Reader").apply {
+                isDaemon = true
+                start()
             }
-        }, "AgentCLI-PTY-Reader").apply {
-            isDaemon = true
-            start()
-        }
 
         write(data)
     }
@@ -82,7 +83,10 @@ class PtyBridge(
         }
     }
 
-    fun resize(cols: Int, rows: Int) {
+    fun resize(
+        cols: Int,
+        rows: Int,
+    ) {
         try {
             process?.winSize = WinSize(cols, rows)
         } catch (e: Exception) {
@@ -99,5 +103,9 @@ class PtyBridge(
                 LOG.warn("[AgentCLI] PtyBridge: error destroying process", e)
             }
         }
+    }
+
+    companion object {
+        private val LOG = Logger.getInstance(PtyBridge::class.java)
     }
 }
