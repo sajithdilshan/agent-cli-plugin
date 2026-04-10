@@ -18,6 +18,10 @@ Trademarks: "Claude," "Claude Code," and the Claude logo are registered trademar
 
 No Warranty: This software is provided "as is," without warranty of any kind. Use of this plugin is at your own risk. You are responsible for complying with the respective terms of service and brand guidelines of any agent CLI you use.
 
+## Screenshots
+
+![Plugin tool window](docs/images/plugin.png)
+
 ## Features
 
 * **Tool window** — "Agent CLI" at the bottom of the IDE with an embedded terminal.
@@ -38,6 +42,8 @@ No Warranty: This software is provided "as is," without warranty of any kind. Us
 * **JDK 17** — used to compile the plugin (see `build.gradle.kts`).
 
 ## Configuration
+
+![Settings dialog](docs/images/settings.png)
 
 | Setting | Description |
 | ------- | ----------- |
