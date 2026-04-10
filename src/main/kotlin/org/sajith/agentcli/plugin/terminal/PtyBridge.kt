@@ -23,7 +23,7 @@ class PtyBridge(
     private var readerThread: Thread? = null
     private val isDisposed = AtomicBoolean(false)
 
-    fun start() {
+    fun startWithCommand(data: String) {
         val builder = PtyProcessBuilder(command)
             .setDirectory(workingDirectory)
             .setEnvironment(environment)
@@ -49,7 +49,7 @@ class PtyBridge(
                 }
             } catch (e: Exception) {
                 if (!isDisposed.get()) {
-                    LOG.warn("[ClaudeCode] PtyBridge: reader thread error after $totalBytesRead total bytes", e)
+                    LOG.warn("[AgentCLI] PtyBridge: reader thread error after $totalBytesRead total bytes", e)
                 }
             } finally {
                 if (!isDisposed.get()) {
@@ -61,10 +61,12 @@ class PtyBridge(
                     onExit(exitCode)
                 }
             }
-        }, "ClaudeCode-PTY-Reader").apply {
+        }, "AgentCLI-PTY-Reader").apply {
             isDaemon = true
             start()
         }
+
+        write(data)
     }
 
     fun write(data: String) {
@@ -75,7 +77,7 @@ class PtyBridge(
             }
         } catch (e: Exception) {
             if (!isDisposed.get()) {
-                LOG.warn("[ClaudeCode] PtyBridge: write error", e)
+                LOG.warn("[AgentCLI] PtyBridge: write error", e)
             }
         }
     }
@@ -84,7 +86,7 @@ class PtyBridge(
         try {
             process?.winSize = WinSize(cols, rows)
         } catch (e: Exception) {
-            LOG.warn("[ClaudeCode] PtyBridge: resize error", e)
+            LOG.warn("[AgentCLI] PtyBridge: resize error", e)
         }
     }
 
@@ -94,7 +96,7 @@ class PtyBridge(
             try {
                 process?.destroy()
             } catch (e: Exception) {
-                LOG.warn("[ClaudeCode] PtyBridge: error destroying process", e)
+                LOG.warn("[AgentCLI] PtyBridge: error destroying process", e)
             }
         }
     }

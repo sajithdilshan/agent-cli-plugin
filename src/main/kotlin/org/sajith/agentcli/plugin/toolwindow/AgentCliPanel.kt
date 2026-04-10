@@ -123,11 +123,9 @@ class AgentCliPanel(
 
         ApplicationManager.getApplication().executeOnPooledThread {
             try {
-                ptyBridge.start()
-                Thread.sleep(500)
-                ptyBridge.write("$command\n")
+                ptyBridge.startWithCommand("$command\n")
             } catch (e: Exception) {
-                LOG.error("[ClaudeCode] Failed to start PTY for session ${session.id}", e)
+                LOG.error("[AgentCLI] Failed to start PTY for session ${session.id}", e)
             }
         }
     }
@@ -152,7 +150,7 @@ class AgentCliPanel(
             sidebar.selectSession(session)
             terminalPanels[session.id]?.focus()
         } else {
-            LOG.warn("[ClaudeCode] switchToSession: no terminal panel found for session ${session.id}")
+            LOG.warn("[AgentCLI] switchToSession: no terminal panel found for session ${session.id}")
         }
     }
 

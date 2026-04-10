@@ -32,7 +32,7 @@ object ClaudeCodeHistoryReader {
                     sessions.add(session)
                 }
             } catch (e: Exception) {
-                LOG.warn("[ClaudeCode] failed to parse session file: ${file.name}", e)
+                LOG.warn("[AgentCLI] failed to parse session file: ${file.name}", e)
             }
         }
 

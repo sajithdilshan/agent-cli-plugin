@@ -14,7 +14,7 @@ class AgentCliToolWindowFactory : ToolWindowFactory, DumbAware {
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         if (!JBCefApp.isSupported()) {
-            LOG.warn("[ClaudeCode] JCEF is not available; embedded terminal disabled")
+            LOG.warn("[AgentCLI] JCEF is not available; embedded terminal disabled")
             val label = JLabel(
                 "<html><center>JCEF (embedded browser) is not available.<br>" +
                         "Please use a JetBrains Runtime that includes JCEF.</center></html>",

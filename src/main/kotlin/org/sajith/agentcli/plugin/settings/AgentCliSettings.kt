@@ -8,8 +8,8 @@ import com.intellij.openapi.components.Storage
 
 @Service(Service.Level.APP)
 @State(
-    name = "ClaudeCodeSettings",
-    storages = [Storage("claudeCodePlugin.xml")]
+    name = "AgentCLISettings",
+    storages = [Storage("AgentCLIPlugin.xml")]
 )
 class AgentCliSettings : PersistentStateComponent<AgentCliSettings.State> {
 

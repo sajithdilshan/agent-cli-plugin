@@ -53,7 +53,7 @@ class CefTerminalPanel(
                 val decoded = String(Base64.getDecoder().decode(base64Data))
                 onInput(decoded)
             } catch (e: Exception) {
-                LOG.warn("[ClaudeCode] CefTerminalPanel: failed to decode input from JS", e)
+                LOG.warn("[AgentCLI] CefTerminalPanel: failed to decode input from JS", e)
             }
             JBCefJSQuery.Response("")
         }
@@ -65,10 +65,10 @@ class CefTerminalPanel(
                     val (cols, rows) = dimensions
                     onResize(cols, rows)
                 } else {
-                    LOG.warn("[ClaudeCode] CefTerminalPanel: invalid resize data: $sizeJson")
+                    LOG.warn("[AgentCLI] CefTerminalPanel: invalid resize data: $sizeJson")
                 }
             } catch (e: Exception) {
-                LOG.warn("[ClaudeCode] CefTerminalPanel: failed to parse resize from JS: $sizeJson", e)
+                LOG.warn("[AgentCLI] CefTerminalPanel: failed to parse resize from JS: $sizeJson", e)
             }
             JBCefJSQuery.Response("")
         }
@@ -83,9 +83,11 @@ class CefTerminalPanel(
                         pendingFocus = false
                         executeJsFocusTerminal()
                     }
-                    // Do initial fit after page load
-                    executeJs("window.fitAndRestore()")
                 }
+                // Fit after load — called for all frames so the CEF viewport
+                // has its final dimensions (main-frame onLoadEnd can fire
+                // before the rendering surface is correctly sized).
+                executeJs("window.fitAndRestore()")
             }
 
             override fun onLoadError(
@@ -93,7 +95,7 @@ class CefTerminalPanel(
                 errorCode: CefLoadHandler.ErrorCode,
                 errorText: String, failedUrl: String
             ) {
-                LOG.error("[ClaudeCode] CefTerminalPanel: page load error: code=$errorCode text='$errorText' url='$failedUrl'")
+                LOG.error("[AgentCLI] CefTerminalPanel: page load error: code=$errorCode text='$errorText' url='$failedUrl'")
             }
         }, browser.cefBrowser)
 
@@ -105,9 +107,9 @@ class CefTerminalPanel(
                 when (level) {
                     CefSettings.LogSeverity.LOGSEVERITY_ERROR,
                     CefSettings.LogSeverity.LOGSEVERITY_FATAL ->
-                        LOG.error("[ClaudeCode] JS: $message ($source:$line)")
+                        LOG.error("[AgentCLI] JS: $message ($source:$line)")
                     CefSettings.LogSeverity.LOGSEVERITY_WARNING ->
-                        LOG.warn("[ClaudeCode] JS: $message ($source:$line)")
+                        LOG.warn("[AgentCLI] JS: $message ($source:$line)")
                     else -> {}
                 }
                 return false
@@ -176,7 +178,7 @@ class CefTerminalPanel(
     private fun readResourceBase64(path: String): String {
         val stream = javaClass.getResourceAsStream(path)
         if (stream == null) {
-            LOG.error("[ClaudeCode] readResourceBase64: resource NOT FOUND at path '$path'")
+            LOG.error("[AgentCLI] readResourceBase64: resource NOT FOUND at path '$path'")
             throw IllegalStateException("Resource not found: $path")
         }
         return Base64.getEncoder().encodeToString(stream.readBytes())
@@ -185,7 +187,7 @@ class CefTerminalPanel(
     private fun readResource(path: String): String {
         val stream = javaClass.getResourceAsStream(path)
         if (stream == null) {
-            LOG.error("[ClaudeCode] readResource: resource NOT FOUND at path '$path'")
+            LOG.error("[AgentCLI] readResource: resource NOT FOUND at path '$path'")
             throw IllegalStateException("Resource not found: $path")
         }
         return stream.bufferedReader().readText()
