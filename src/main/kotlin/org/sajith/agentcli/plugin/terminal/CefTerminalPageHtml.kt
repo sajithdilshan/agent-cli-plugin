@@ -21,7 +21,7 @@ internal fun buildCefTerminalPageHtml(
     <head>
     <meta charset="UTF-8">
     <style>
-    $fontFaceCssfontFaceCss
+    $fontFaceCss
     </style>
     <style>
     html, body {
@@ -62,22 +62,22 @@ internal fun buildCefTerminalPageHtml(
     }
     </style>
     <style>
-    $xtermCssxtermCss
+    $xtermCss
     </style>
     </head>
     <body>
     <div id="terminal"></div>
     <script>
-    $xtermJsxtermJs
+    $xtermJs
     </script>
     <script>
-    $fitAddonJsfitAddonJs
+    $fitAddonJs
     </script>
     <script>
-    $webLinksAddonJswebLinksAddonJs
+    $webLinksAddonJs
     </script>
     <script>
-    $unicode11AddonJsunicode11AddonJs
+    $unicode11AddonJs
     </script>
     <script>
     (function() {

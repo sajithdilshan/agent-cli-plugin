@@ -27,9 +27,7 @@ object ClaudeCodeHistoryReader {
         jsonlFiles.forEach { file ->
             try {
                 val session = parseSessionFile(file)
-                if (session != null) {
-                    sessions.add(session)
-                }
+                sessions.add(session)
             } catch (e: Exception) {
                 LOG.warn("[AgentCLI] failed to parse session file: ${file.name}", e)
             }
