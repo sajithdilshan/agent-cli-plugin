@@ -23,6 +23,7 @@ class CefTerminalPanel(
     parentDisposable: Disposable,
     private val onInput: (String) -> Unit,
     private val onResize: (cols: Int, rows: Int) -> Unit,
+    private val loadingText: String = "Starting Session...",
 ) : Disposable {
     private val browser: JBCefBrowser = JBCefBrowser()
     private val inputQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
@@ -169,6 +170,7 @@ class CefTerminalPanel(
             unicode11AddonJs = unicode11AddonJs,
             inputQueryJs = inputQueryJs,
             resizeQueryJs = resizeQueryJs,
+            loadingText = loadingText,
         )
     }
 

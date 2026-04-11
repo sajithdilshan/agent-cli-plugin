@@ -79,7 +79,7 @@ class AgentCliPanel(
     ) {
         val cmd = getCommand(agentType)
         val session = sessionManager.createSession(title, agentType = agentType, agentSessionId = sessionId)
-        createTerminalForSession(session, "$cmd --resume $sessionId")
+        createTerminalForSession(session, "$cmd --resume $sessionId", isResume = true)
     }
 
     private fun getCommand(agentType: AgentType): String {
@@ -94,6 +94,7 @@ class AgentCliPanel(
     private fun createTerminalForSession(
         session: AgentCliSession,
         command: String,
+        isResume: Boolean = false,
     ) {
         val workingDir = project.basePath ?: System.getProperty("user.home")
 
@@ -104,6 +105,7 @@ class AgentCliPanel(
                 parentDisposable = parentDisposable,
                 onInput = { data -> ptyBridge.write(data) },
                 onResize = { cols, rows -> ptyBridge.resize(cols, rows) },
+                loadingText = if (isResume) "Resuming Session..." else "Starting Session...",
             )
 
         val shellCommand = shellInvocation()

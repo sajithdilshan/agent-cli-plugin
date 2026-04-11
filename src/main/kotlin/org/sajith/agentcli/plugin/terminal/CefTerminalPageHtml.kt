@@ -14,6 +14,7 @@ internal fun buildCefTerminalPageHtml(
     unicode11AddonJs: String,
     inputQueryJs: String,
     resizeQueryJs: String,
+    loadingText: String = "Starting Session...",
 ): String =
     """
     <!DOCTYPE html>
@@ -68,7 +69,7 @@ internal fun buildCefTerminalPageHtml(
         justify-content: center;
         background: #1e1e1e;
         z-index: 1000;
-        transition: opacity 0.4s ease;
+        transition: opacity 0.5s ease;
     }
     #loading-overlay.fade-out {
         opacity: 0;
@@ -76,21 +77,100 @@ internal fun buildCefTerminalPageHtml(
     }
     .loading-content {
         text-align: center;
-        color: rgba(255, 255, 255, 0.6);
+        color: rgba(255, 255, 255, 0.5);
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         font-size: 13px;
+        letter-spacing: 0.5px;
     }
-    .spinner {
-        width: 24px;
-        height: 24px;
-        margin: 0 auto 12px;
-        border: 2px solid rgba(255, 255, 255, 0.15);
-        border-top-color: rgba(255, 255, 255, 0.5);
+    .loading-text {
+        margin-top: 20px;
+        animation: textPulse 2s ease-in-out infinite;
+    }
+    /* ── Animated robot logo ── */
+    .robot {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto;
+        position: relative;
+    }
+    .robot-head {
+        position: absolute;
+        top: 18px; left: 6px;
+        width: 52px; height: 38px;
+        border: 2px solid rgba(255,255,255,0.4);
+        border-radius: 10px;
+        animation: headBob 2s ease-in-out infinite;
+    }
+    .robot-antenna {
+        position: absolute;
+        top: 4px; left: 50%;
+        width: 2px; height: 14px;
+        background: rgba(255,255,255,0.4);
+        transform: translateX(-50%);
+        animation: headBob 2s ease-in-out infinite;
+    }
+    .robot-antenna::after {
+        content: '';
+        position: absolute;
+        top: -4px; left: 50%;
+        width: 6px; height: 6px;
+        border: 2px solid rgba(255,255,255,0.4);
         border-radius: 50%;
-        animation: spin 0.8s linear infinite;
+        transform: translateX(-50%);
+        animation: antennaPulse 1.5s ease-in-out infinite;
     }
-    @keyframes spin {
-        to { transform: rotate(360deg); }
+    .robot-eye {
+        position: absolute;
+        top: 30px;
+        width: 10px; height: 10px;
+        border: 2px solid rgba(255,255,255,0.4);
+        border-radius: 3px;
+        animation: headBob 2s ease-in-out infinite;
+    }
+    .robot-eye-left { left: 16px; }
+    .robot-eye-right { right: 16px; }
+    .robot-eye::after {
+        content: '';
+        position: absolute;
+        top: 2px; left: 2px;
+        width: 4px; height: 4px;
+        background: rgba(255,255,255,0.5);
+        border-radius: 1px;
+        animation: blink 3s ease-in-out infinite;
+    }
+    .robot-mouth {
+        position: absolute;
+        top: 46px; left: 50%;
+        width: 18px; height: 2px;
+        background: rgba(255,255,255,0.4);
+        transform: translateX(-50%);
+        animation: headBob 2s ease-in-out infinite;
+    }
+    .robot-ear {
+        position: absolute;
+        top: 32px;
+        width: 6px; height: 14px;
+        border: 2px solid rgba(255,255,255,0.4);
+        border-radius: 3px;
+        animation: headBob 2s ease-in-out infinite;
+    }
+    .robot-ear-left { left: 0; }
+    .robot-ear-right { right: 0; }
+    @keyframes headBob {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-3px); }
+    }
+    @keyframes antennaPulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); border-color: rgba(255,255,255,0.4); }
+        50% { box-shadow: 0 0 6px 2px rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.7); }
+    }
+    @keyframes blink {
+        0%, 42%, 48%, 100% { opacity: 1; }
+        45% { opacity: 0; }
+    }
+    @keyframes textPulse {
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 0.9; }
     }
     </style>
     <style>
@@ -100,8 +180,16 @@ internal fun buildCefTerminalPageHtml(
     <body>
     <div id="loading-overlay">
         <div class="loading-content">
-            <div class="spinner"></div>
-            Loading Session...
+            <div class="robot">
+                <div class="robot-antenna"></div>
+                <div class="robot-head"></div>
+                <div class="robot-eye robot-eye-left"></div>
+                <div class="robot-eye robot-eye-right"></div>
+                <div class="robot-mouth"></div>
+                <div class="robot-ear robot-ear-left"></div>
+                <div class="robot-ear robot-ear-right"></div>
+            </div>
+            <div class="loading-text">${loadingText}</div>
         </div>
     </div>
     <div id="terminal"></div>
@@ -162,13 +250,6 @@ internal fun buildCefTerminalPageHtml(
             requestAnimationFrame(function() {
                 requestAnimationFrame(function() {
                     window.fitAndRestore();
-
-                    // Dismiss loading overlay
-                    var overlay = document.getElementById('loading-overlay');
-                    if (overlay) {
-                        overlay.classList.add('fade-out');
-                        setTimeout(function() { overlay.remove(); }, 400);
-                    }
                 });
             });
         };
@@ -189,6 +270,32 @@ internal fun buildCefTerminalPageHtml(
 
         // ── Window bridge functions called from Java ──────────────────
 
+        // Dismiss loading overlay: wait 2s, then check every 500ms
+        // if output has gone quiet. Optimized for Claude Code which
+        // outputs its banner then goes idle when ready for input.
+        var overlayDismissed = false;
+        var lastOutputTime = 0;
+
+        function dismissOverlay() {
+            if (overlayDismissed) return;
+            overlayDismissed = true;
+            var overlay = document.getElementById('loading-overlay');
+            if (overlay) {
+                overlay.classList.add('fade-out');
+                setTimeout(function() { overlay.remove(); }, 400);
+            }
+        }
+
+        setTimeout(function() {
+            var check = setInterval(function() {
+                if (overlayDismissed) { clearInterval(check); return; }
+                if (!lastOutputTime || (Date.now() - lastOutputTime >= 500)) {
+                    clearInterval(check);
+                    dismissOverlay();
+                }
+            }, 500);
+        }, 2000);
+
         // Write PTY output (Base64 encoded)
         window.writeTerminalData = function(base64Data) {
             try {
@@ -198,6 +305,7 @@ internal fun buildCefTerminalPageHtml(
                     bytes[i] = binary.charCodeAt(i);
                 }
                 term.write(bytes, function() {
+                    lastOutputTime = Date.now();
                     if (Date.now() < postResizeScrollDeadline) {
                         if (postResizeSettleTimer) { clearTimeout(postResizeSettleTimer); }
                         postResizeSettleTimer = setTimeout(function() {
