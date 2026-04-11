@@ -7,9 +7,6 @@ import com.google.gson.stream.JsonToken
 import com.intellij.openapi.diagnostic.Logger
 import java.io.File
 import java.io.StringReader
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
 
 object ClaudeCodeHistoryReader {
     private val LOG = Logger.getInstance(ClaudeCodeHistoryReader::class.java)
@@ -22,21 +19,12 @@ object ClaudeCodeHistoryReader {
         val projectDir = SessionPathResolver.resolveProjectDirectory(claudeDir, encodedPath) ?: return emptyList()
         val jsonlFiles = projectDir.listFiles { file -> file.extension == "jsonl" } ?: emptyArray()
 
-        return jsonlFiles
-            .toList()
-            .parallelStream()
-            .map { file ->
-                try {
-                    parseSessionFile(file)
-                } catch (e: Exception) {
-                    LOG.warn("[AgentCLI] failed to parse session file: ${file.name}", e)
-                    null
-                }
-            }
-            .filter { it != null }
-            .map { it!! }
-            .toList()
-            .sortedByDescending { it.timestamp }
+        return HistoryReaderUtils.parseSessionsInParallel(
+            files = jsonlFiles,
+            sourceName = "AgentCLI",
+            logger = LOG,
+            parser = ::parseSessionFile,
+        )
     }
 
     /**
@@ -69,11 +57,7 @@ object ClaudeCodeHistoryReader {
             }
         }
 
-        val timestamp =
-            LocalDateTime.ofInstant(
-                Instant.ofEpochMilli(file.lastModified()),
-                ZoneId.systemDefault(),
-            )
+        val timestamp = HistoryReaderUtils.fileTimestamp(file)
 
         return HistoricalSession(
             sessionId = sessionId,

@@ -22,21 +22,12 @@ object GeminiHistoryReader {
 
         val jsonFiles = chatsDir.listFiles { file -> file.extension == "json" } ?: emptyArray()
 
-        return jsonFiles
-            .toList()
-            .parallelStream()
-            .map { file ->
-                try {
-                    parseSessionFile(file)
-                } catch (e: Exception) {
-                    LOG.warn("[Gemini] Failed to parse session file: ${file.name}", e)
-                    null
-                }
-            }
-            .filter { it != null }
-            .map { it!! }
-            .toList()
-            .sortedByDescending { it.timestamp }
+        return HistoryReaderUtils.parseSessionsInParallel(
+            files = jsonFiles,
+            sourceName = "Gemini",
+            logger = LOG,
+            parser = ::parseSessionFile,
+        )
     }
 
     /**

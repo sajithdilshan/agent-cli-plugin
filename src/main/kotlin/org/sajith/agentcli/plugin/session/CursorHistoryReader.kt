@@ -5,9 +5,6 @@ import com.google.gson.stream.JsonToken
 import com.intellij.openapi.diagnostic.Logger
 import java.io.File
 import java.io.StringReader
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
 
 object CursorHistoryReader {
     private val LOG = Logger.getInstance(CursorHistoryReader::class.java)
@@ -24,23 +21,18 @@ object CursorHistoryReader {
 
         val sessionDirs = transcriptsDir.listFiles { f -> f.isDirectory } ?: emptyArray()
 
-        return sessionDirs
-            .toList()
-            .parallelStream()
-            .map { dir ->
-                val jsonlFile = dir.resolve("${dir.name}.jsonl")
-                if (!jsonlFile.exists()) return@map null
-                try {
-                    parseSessionFile(jsonlFile)
-                } catch (e: Exception) {
-                    LOG.warn("[Cursor] Failed to parse session file: ${jsonlFile.name}", e)
-                    null
-                }
-            }
-            .filter { it != null }
-            .map { it!! }
-            .toList()
-            .sortedByDescending { it.timestamp }
+        val jsonlFiles =
+            sessionDirs
+                .map { it.resolve("${it.name}.jsonl") }
+                .filter { it.exists() }
+                .toTypedArray()
+
+        return HistoryReaderUtils.parseSessionsInParallel(
+            files = jsonlFiles,
+            sourceName = "Cursor",
+            logger = LOG,
+            parser = ::parseSessionFile,
+        )
     }
 
     private fun parseSessionFile(file: File): HistoricalSession? {
@@ -63,11 +55,7 @@ object CursorHistoryReader {
             }
         }
 
-        val timestamp =
-            LocalDateTime.ofInstant(
-                Instant.ofEpochMilli(file.lastModified()),
-                ZoneId.systemDefault(),
-            )
+        val timestamp = HistoryReaderUtils.fileTimestamp(file)
 
         return HistoricalSession(
             sessionId = sessionId,
