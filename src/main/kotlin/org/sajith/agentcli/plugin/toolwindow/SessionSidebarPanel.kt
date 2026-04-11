@@ -24,6 +24,7 @@ import org.sajith.agentcli.plugin.session.GeminiHistoryReader
 import org.sajith.agentcli.plugin.session.HistoricalSession
 import org.sajith.agentcli.plugin.session.SessionManager
 import java.awt.BorderLayout
+import java.awt.CardLayout
 import java.awt.Component
 import java.awt.Cursor
 import java.awt.Dimension
@@ -34,6 +35,7 @@ import java.time.LocalDate
 import java.time.temporal.WeekFields
 import java.util.Locale
 import java.util.concurrent.CompletableFuture
+import javax.swing.BoxLayout
 import javax.swing.DefaultListModel
 import javax.swing.JComponent
 import javax.swing.JLabel
@@ -41,7 +43,9 @@ import javax.swing.JList
 import javax.swing.JPanel
 import javax.swing.ListCellRenderer
 import javax.swing.ListSelectionModel
+import javax.swing.SwingConstants
 import javax.swing.SwingUtilities
+import javax.swing.Timer
 import javax.swing.border.MatteBorder
 
 /**
@@ -68,6 +72,9 @@ class SessionSidebarPanel(
 
     private val historyListModel = DefaultListModel<SidebarItem>()
     private val historyList = JBList(historyListModel)
+
+    private val historyCardLayout = CardLayout()
+    private val historyCardPanel = JPanel(historyCardLayout)
 
     private val sessionListPanel: JPanel
     private var isCollapsed = false
@@ -352,8 +359,42 @@ class SessionSidebarPanel(
             )
         }
 
-        return JBScrollPane(historyList).apply {
+        val listScroll = JBScrollPane(historyList).apply {
             border = JBUI.Borders.empty()
+        }
+
+        val loadingPanel = createLoadingPanel()
+
+        historyCardPanel.apply {
+            add(loadingPanel, CARD_LOADING)
+            add(listScroll, CARD_LIST)
+            historyCardLayout.show(this, CARD_LOADING)
+        }
+
+        return historyCardPanel
+    }
+
+    private fun createLoadingPanel(): JComponent {
+        val dotsLabel = JLabel("Loading sessions", SwingConstants.CENTER).apply {
+            foreground = JBColor.GRAY
+            font = font.deriveFont(Font.PLAIN, 12f)
+        }
+
+        // Animate dots: "Loading sessions", "Loading sessions.", "Loading sessions..", "Loading sessions..."
+        val dotStates = arrayOf("", ".", "..", "...")
+        var dotIndex = 0
+        Timer(400) {
+            dotIndex = (dotIndex + 1) % dotStates.size
+            dotsLabel.text = "Loading sessions${dotStates[dotIndex]}"
+        }.apply { isRepeats = true; start() }
+
+        return JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+            background = JBColor.PanelBackground
+            add(javax.swing.Box.createVerticalGlue())
+            dotsLabel.alignmentX = Component.CENTER_ALIGNMENT
+            add(dotsLabel)
+            add(javax.swing.Box.createVerticalGlue())
         }
     }
 
@@ -361,10 +402,23 @@ class SessionSidebarPanel(
 
     private companion object {
         private val LOG = Logger.getInstance(SessionSidebarPanel::class.java)
+        private const val CARD_LOADING = "loading"
+        private const val CARD_LIST = "list"
+        private const val MIN_LOADING_MS = 500L
     }
 
     fun loadHistory() {
         val projectPath = project.basePath ?: return
+
+        val isInitialLoad = historyListModel.isEmpty
+
+        if (isInitialLoad) {
+            SwingUtilities.invokeLater {
+                historyCardLayout.show(historyCardPanel, CARD_LOADING)
+            }
+        }
+
+        val loadStartTime = System.currentTimeMillis()
 
         ApplicationManager.getApplication().executeOnPooledThread {
             try {
@@ -403,15 +457,26 @@ class SessionSidebarPanel(
 
                 val grouped = groupByDate(filtered)
 
+                // Ensure minimum loading time for smooth transition on initial load
+                if (isInitialLoad) {
+                    val elapsed = System.currentTimeMillis() - loadStartTime
+                    val remaining = MIN_LOADING_MS - elapsed
+                    if (remaining > 0) Thread.sleep(remaining)
+                }
+
                 SwingUtilities.invokeLater {
                     historyListModel.clear()
                     grouped.forEach { (header, sessions) ->
                         historyListModel.addElement(SidebarItem.Header(header))
                         sessions.forEach { historyListModel.addElement(SidebarItem.HistoryEntry(it)) }
                     }
+                    historyCardLayout.show(historyCardPanel, CARD_LIST)
                 }
             } catch (e: Exception) {
                 LOG.warn("Failed to load history", e)
+                SwingUtilities.invokeLater {
+                    historyCardLayout.show(historyCardPanel, CARD_LIST)
+                }
             }
         }
     }

@@ -2,8 +2,11 @@ package org.sajith.agentcli.plugin.session
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonToken
 import com.intellij.openapi.diagnostic.Logger
 import java.io.File
+import java.io.StringReader
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -19,21 +22,21 @@ object ClaudeCodeHistoryReader {
         val encodedPath = normalizedPath.replace("/", "-")
 
         val projectDir = resolveProjectHistoryDirectory(claudeDir, encodedPath) ?: return emptyList()
-
         val jsonlFiles = projectDir.listFiles { file -> file.extension == "jsonl" } ?: emptyArray()
 
-        val sessions = mutableListOf<HistoricalSession>()
-
-        jsonlFiles.forEach { file ->
-            try {
-                val session = parseSessionFile(file)
-                sessions.add(session)
-            } catch (e: Exception) {
-                LOG.warn("[AgentCLI] failed to parse session file: ${file.name}", e)
+        return jsonlFiles.toList().parallelStream()
+            .map { file ->
+                try {
+                    parseSessionFile(file)
+                } catch (e: Exception) {
+                    LOG.warn("[AgentCLI] failed to parse session file: ${file.name}", e)
+                    null
+                }
             }
-        }
-
-        return sessions.sortedByDescending { it.timestamp }
+            .filter { it != null }
+            .map { it!! }
+            .toList()
+            .sortedByDescending { it.timestamp }
     }
 
     private fun resolveProjectHistoryDirectory(
@@ -47,39 +50,35 @@ object ClaudeCodeHistoryReader {
     }
 
     /**
-     * Lightweight parse: reads only the first few lines to extract title and first user message.
-     * Uses file modification time as timestamp to avoid scanning deep into large files.
+     * Single-pass parse: reads the file once, extracting both first user message and custom title.
+     * Uses GSON streaming (JsonReader) with skipValue() to avoid building full JSON trees.
+     * Uses file modification time as timestamp.
      */
     private fun parseSessionFile(file: File): HistoricalSession {
         val sessionId = file.nameWithoutExtension
-
-        // First user message: always near the top, scan first 50 lines
         var firstUserMessage = ""
+        var customTitle = ""
         var linesScanned = 0
+
         file.bufferedReader().useLines { lines ->
             for (line in lines) {
                 if (line.isBlank()) continue
-                linesScanned++
 
-                if (line.contains("\"type\":\"user\"")) {
-                    try {
-                        val obj = JsonParser.parseString(line).asJsonObject
-                        if (obj.get("type")?.asString == "user") {
-                            firstUserMessage = extractUserMessage(obj)
-                            break
-                        }
-                    } catch (_: Exception) {
-                    }
+                // Custom title: can appear on any line, use streaming parse
+                if (customTitle.isEmpty() && line.contains("\"custom-title\"")) {
+                    customTitle = extractFieldStreaming(line, "customTitle")
+                    if (customTitle.isNotEmpty()) break // title found — no need for firstMessage
                 }
 
-                if (linesScanned >= 50) break
+                // First user message: only near the top, not needed if we already have a title
+                if (firstUserMessage.isEmpty() && linesScanned < 50 && line.contains("\"type\":\"user\"")) {
+                    firstUserMessage = extractUserMessageStreaming(line)
+                }
+
+                linesScanned++
             }
         }
 
-        // Custom title: can appear anywhere, search the file in parallel chunks
-        val customTitle = findCustomTitleParallel(file)
-
-        // Use file modification time — fast and avoids parsing timestamps from JSON
         val timestamp =
             LocalDateTime.ofInstant(
                 Instant.ofEpochMilli(file.lastModified()),
@@ -91,46 +90,75 @@ object ClaudeCodeHistoryReader {
             customTitle = customTitle,
             firstMessage = firstUserMessage,
             timestamp = timestamp,
-            messageCount = 0,
         )
     }
 
-    private fun findCustomTitleParallel(file: File, chunkCount: Int = 4): String {
-        val fileSize = file.length()
-        if (fileSize == 0L) return ""
-
-        val chunkSize = fileSize / chunkCount
-
-        return (0 until chunkCount).toList().parallelStream()
-            .map { i ->
-                val start = i * chunkSize
-                val end = if (i == chunkCount - 1) fileSize else (i + 1) * chunkSize
-                searchChunkForTitle(file, start, end)
-            }
-            .filter { it.isNotEmpty() }
-            .findFirst()
-            .orElse("")
-    }
-
-    private fun searchChunkForTitle(file: File, start: Long, end: Long): String {
+    /**
+     * Extracts a single top-level string field from a JSON line using GSON streaming.
+     * Skips all other fields without allocating objects — O(1) memory for non-target fields.
+     */
+    private fun extractFieldStreaming(line: String, targetKey: String): String {
         try {
-            file.inputStream().use { fis ->
-                if (start > 0) fis.skip(start)
-                val reader = fis.bufferedReader(Charsets.UTF_8)
-                if (start > 0) reader.readLine() // skip partial line at boundary
-
-                var bytesRead = start
-                while (bytesRead < end) {
-                    val line = reader.readLine() ?: break
-                    bytesRead += line.toByteArray(Charsets.UTF_8).size + 1
-                    if (line.contains("\"custom-title\"")) {
-                        try {
-                            val obj = JsonParser.parseString(line).asJsonObject
-                            return obj.get("customTitle")?.asString ?: ""
-                        } catch (_: Exception) {
-                        }
+            JsonReader(StringReader(line)).use { reader ->
+                reader.beginObject()
+                while (reader.hasNext()) {
+                    val name = reader.nextName()
+                    if (name == targetKey && reader.peek() == JsonToken.STRING) {
+                        return reader.nextString()
+                    } else {
+                        reader.skipValue()
                     }
                 }
+            }
+        } catch (_: Exception) {
+        }
+        return ""
+    }
+
+    /**
+     * Extracts the user message text using GSON streaming.
+     * Verifies type=="user" and extracts the message content without building a full JsonObject,
+     * falling back to tree parse only for complex nested message structures.
+     */
+    private fun extractUserMessageStreaming(line: String): String {
+        try {
+            var type: String? = null
+            var messageRaw: String? = null
+            var isMessageComplex = false
+
+            JsonReader(StringReader(line)).use { reader ->
+                reader.beginObject()
+                while (reader.hasNext()) {
+                    when (reader.nextName()) {
+                        "type" -> type = reader.nextString()
+                        "message" -> {
+                            if (reader.peek() == JsonToken.STRING) {
+                                messageRaw = reader.nextString()
+                            } else {
+                                // Nested object/array — fall back to tree parse for this field
+                                isMessageComplex = true
+                                reader.skipValue()
+                            }
+                        }
+                        "display" -> {
+                            if (messageRaw == null && reader.peek() == JsonToken.STRING) {
+                                messageRaw = reader.nextString()
+                            } else {
+                                reader.skipValue()
+                            }
+                        }
+                        else -> reader.skipValue()
+                    }
+                }
+            }
+
+            if (type != "user") return ""
+            if (messageRaw != null) return messageRaw
+
+            // Complex message structure — use tree parse (rare case)
+            if (isMessageComplex) {
+                val obj = JsonParser.parseString(line).asJsonObject
+                return extractUserMessage(obj)
             }
         } catch (_: Exception) {
         }

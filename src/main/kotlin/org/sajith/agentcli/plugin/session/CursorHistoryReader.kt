@@ -1,8 +1,10 @@
 package org.sajith.agentcli.plugin.session
 
-import com.google.gson.JsonParser
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonToken
 import com.intellij.openapi.diagnostic.Logger
 import java.io.File
+import java.io.StringReader
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -22,21 +24,23 @@ object CursorHistoryReader {
         val transcriptsDir = projectDir.resolve("agent-transcripts")
         if (!transcriptsDir.exists()) return emptyList()
 
-        val sessions = mutableListOf<HistoricalSession>()
-
         val sessionDirs = transcriptsDir.listFiles { f -> f.isDirectory } ?: emptyArray()
-        for (dir in sessionDirs) {
-            val jsonlFile = dir.resolve("${dir.name}.jsonl")
-            if (!jsonlFile.exists()) continue
-            try {
-                val session = parseSessionFile(jsonlFile)
-                if (session != null) sessions.add(session)
-            } catch (e: Exception) {
-                LOG.warn("[Cursor] Failed to parse session file: ${jsonlFile.name}", e)
-            }
-        }
 
-        return sessions.sortedByDescending { it.timestamp }
+        return sessionDirs.toList().parallelStream()
+            .map { dir ->
+                val jsonlFile = dir.resolve("${dir.name}.jsonl")
+                if (!jsonlFile.exists()) return@map null
+                try {
+                    parseSessionFile(jsonlFile)
+                } catch (e: Exception) {
+                    LOG.warn("[Cursor] Failed to parse session file: ${jsonlFile.name}", e)
+                    null
+                }
+            }
+            .filter { it != null }
+            .map { it!! }
+            .toList()
+            .sortedByDescending { it.timestamp }
     }
 
     private fun resolveProjectDirectory(
@@ -52,82 +56,117 @@ object CursorHistoryReader {
     private fun parseSessionFile(file: File): HistoricalSession? {
         val sessionId = file.nameWithoutExtension
         var firstUserMessage = ""
-        var timestamp: LocalDateTime? = null
-        var messageCount = 0
+        var linesScanned = 0
 
         file.bufferedReader().useLines { lines ->
             for (line in lines) {
                 if (line.isBlank()) continue
-                try {
-                    val obj = JsonParser.parseString(line).asJsonObject
-                    val role = obj.get("role")?.asString ?: continue
+                if (++linesScanned > 100) break
 
-                    if (role == "user") {
-                        messageCount++
-
-                        if (firstUserMessage.isEmpty()) {
-                            firstUserMessage = extractUserMessage(obj)
-                        }
-                        if (timestamp == null) {
-                            timestamp = getFileTimestamp(file)
-                        }
+                if (line.contains("\"user\"")) {
+                    val msg = extractUserMessageStreaming(line)
+                    if (msg.isNotEmpty()) {
+                        firstUserMessage = msg
+                        break
                     }
-                } catch (_: Exception) {
-                    // Skip malformed lines
                 }
             }
         }
 
-        val ts = timestamp ?: return null
+        val timestamp = LocalDateTime.ofInstant(
+            Instant.ofEpochMilli(file.lastModified()),
+            ZoneId.systemDefault(),
+        )
 
         return HistoricalSession(
             sessionId = sessionId,
             customTitle = "",
             firstMessage = firstUserMessage,
-            timestamp = ts,
-            messageCount = messageCount,
+            timestamp = timestamp,
         )
     }
 
-    private fun extractUserMessage(obj: com.google.gson.JsonObject): String {
-        val messageEl = obj.get("message") ?: return ""
+    /**
+     * Uses GSON streaming to extract the message from a user line without full tree parse.
+     * Falls back gracefully for complex nested message structures.
+     */
+    private fun extractUserMessageStreaming(line: String): String {
+        try {
+            var role: String? = null
+            var message: String? = null
+            var isMessageComplex = false
 
-        if (messageEl.isJsonObject) {
-            val content = messageEl.asJsonObject.get("content")
-            if (content != null && content.isJsonArray) {
-                for (block in content.asJsonArray) {
-                    if (block.isJsonObject) {
-                        val blockObj = block.asJsonObject
-                        if (blockObj.get("type")?.asString == "text") {
-                            val text = blockObj.get("text")?.asString ?: continue
-                            if (text.isNotBlank()) return stripUserQueryTags(text)
+            JsonReader(StringReader(line)).use { reader ->
+                reader.beginObject()
+                while (reader.hasNext()) {
+                    when (reader.nextName()) {
+                        "role" -> role = reader.nextString()
+                        "message" -> {
+                            if (reader.peek() == JsonToken.STRING) {
+                                message = reader.nextString()
+                            } else if (reader.peek() == JsonToken.BEGIN_OBJECT) {
+                                message = extractContentFromMessageObject(reader)
+                                isMessageComplex = true
+                            } else {
+                                reader.skipValue()
+                            }
                         }
+                        else -> reader.skipValue()
                     }
                 }
             }
-            if (content != null && content.isJsonPrimitive) {
-                return stripUserQueryTags(content.asString)
+
+            if (role != "user") return ""
+            return message?.let { stripUserQueryTags(it) } ?: ""
+        } catch (_: Exception) {
+        }
+        return ""
+    }
+
+    /**
+     * Streams through a nested message object { content: string | [{ type, text }] }
+     */
+    private fun extractContentFromMessageObject(reader: JsonReader): String? {
+        reader.beginObject()
+        while (reader.hasNext()) {
+            if (reader.nextName() == "content") {
+                if (reader.peek() == JsonToken.STRING) {
+                    return reader.nextString()
+                }
+                if (reader.peek() == JsonToken.BEGIN_ARRAY) {
+                    reader.beginArray()
+                    while (reader.hasNext()) {
+                        if (reader.peek() == JsonToken.BEGIN_OBJECT) {
+                            var type: String? = null
+                            var text: String? = null
+                            reader.beginObject()
+                            while (reader.hasNext()) {
+                                when (reader.nextName()) {
+                                    "type" -> type = reader.nextString()
+                                    "text" -> text = reader.nextString()
+                                    else -> reader.skipValue()
+                                }
+                            }
+                            reader.endObject()
+                            if (type == "text" && !text.isNullOrBlank()) return text
+                        } else {
+                            reader.skipValue()
+                        }
+                    }
+                    reader.endArray()
+                    return null
+                }
+                reader.skipValue()
+            } else {
+                reader.skipValue()
             }
         }
-
-        if (messageEl.isJsonPrimitive) {
-            return stripUserQueryTags(messageEl.asString)
-        }
-
-        return ""
+        reader.endObject()
+        return null
     }
 
     private fun stripUserQueryTags(text: String): String {
         val match = USER_QUERY_REGEX.find(text)
         return (match?.groupValues?.get(1) ?: text).trim()
-    }
-
-    private fun getFileTimestamp(file: File): LocalDateTime? {
-        return try {
-            val millis = file.lastModified()
-            LocalDateTime.ofInstant(Instant.ofEpochMilli(millis), ZoneId.systemDefault())
-        } catch (_: Exception) {
-            null
-        }
     }
 }

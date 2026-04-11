@@ -9,7 +9,6 @@ data class HistoricalSession(
     val customTitle: String,
     val firstMessage: String,
     val timestamp: LocalDateTime,
-    val messageCount: Int,
     val agentType: AgentType = AgentType.CLAUDE,
 ) {
     val displayName: String
