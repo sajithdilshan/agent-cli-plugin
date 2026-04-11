@@ -1,6 +1,5 @@
 package org.sajith.agentcli.plugin.session
 
-import com.google.gson.JsonParser
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonToken
 import com.intellij.openapi.diagnostic.Logger
@@ -16,14 +15,16 @@ object GeminiHistoryReader {
         val geminiDir = File(System.getProperty("user.home"), ".gemini")
         if (!geminiDir.exists()) return emptyList()
 
-        val projectName = resolveProjectName(geminiDir, projectPath) ?: return emptyList()
+        val projectName = SessionPathResolver.resolveGeminiProjectName(geminiDir, projectPath) ?: return emptyList()
 
         val chatsDir = geminiDir.resolve("tmp/$projectName/chats")
         if (!chatsDir.exists() || !chatsDir.isDirectory) return emptyList()
 
         val jsonFiles = chatsDir.listFiles { file -> file.extension == "json" } ?: emptyArray()
 
-        return jsonFiles.toList().parallelStream()
+        return jsonFiles
+            .toList()
+            .parallelStream()
             .map { file ->
                 try {
                     parseSessionFile(file)
@@ -36,24 +37,6 @@ object GeminiHistoryReader {
             .map { it!! }
             .toList()
             .sortedByDescending { it.timestamp }
-    }
-
-    private fun resolveProjectName(
-        geminiDir: File,
-        projectPath: String,
-    ): String? {
-        val projectsFile = geminiDir.resolve("projects.json")
-        if (!projectsFile.exists()) return null
-
-        return try {
-            val root = JsonParser.parseString(projectsFile.readText()).asJsonObject
-            val projects = root.getAsJsonObject("projects") ?: return null
-            val normalizedPath = projectPath.trimEnd('/')
-            projects.get(normalizedPath)?.asString
-        } catch (e: Exception) {
-            LOG.warn("[Gemini] Failed to parse projects.json", e)
-            null
-        }
     }
 
     /**

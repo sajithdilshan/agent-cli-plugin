@@ -34,7 +34,6 @@ import java.awt.event.MouseEvent
 import java.time.LocalDate
 import java.time.temporal.WeekFields
 import java.util.Locale
-import java.util.concurrent.CompletableFuture
 import javax.swing.BoxLayout
 import javax.swing.DefaultListModel
 import javax.swing.JComponent
@@ -359,9 +358,10 @@ class SessionSidebarPanel(
             )
         }
 
-        val listScroll = JBScrollPane(historyList).apply {
-            border = JBUI.Borders.empty()
-        }
+        val listScroll =
+            JBScrollPane(historyList).apply {
+                border = JBUI.Borders.empty()
+            }
 
         val loadingPanel = createLoadingPanel()
 
@@ -375,10 +375,11 @@ class SessionSidebarPanel(
     }
 
     private fun createLoadingPanel(): JComponent {
-        val dotsLabel = JLabel("Loading sessions", SwingConstants.CENTER).apply {
-            foreground = JBColor.GRAY
-            font = font.deriveFont(Font.PLAIN, 12f)
-        }
+        val dotsLabel =
+            JLabel("Loading sessions", SwingConstants.CENTER).apply {
+                foreground = JBColor.GRAY
+                font = font.deriveFont(Font.PLAIN, 12f)
+            }
 
         // Animate dots: "Loading sessions", "Loading sessions.", "Loading sessions..", "Loading sessions..."
         val dotStates = arrayOf("", ".", "..", "...")
@@ -386,7 +387,10 @@ class SessionSidebarPanel(
         Timer(400) {
             dotIndex = (dotIndex + 1) % dotStates.size
             dotsLabel.text = "Loading sessions${dotStates[dotIndex]}"
-        }.apply { isRepeats = true; start() }
+        }.apply {
+            isRepeats = true
+            start()
+        }
 
         return JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
@@ -422,34 +426,13 @@ class SessionSidebarPanel(
 
         ApplicationManager.getApplication().executeOnPooledThread {
             try {
+                val sessionManager = SessionManager.getInstance(project)
                 val openIds = mutableSetOf<String>()
                 AgentType.entries.forEach { agentType ->
-                    openIds.addAll(SessionManager.getInstance(project).getOpenSessionIds(agentType))
+                    openIds.addAll(sessionManager.getOpenSessionIds(agentType))
                 }
 
-                // Read all agents in parallel
-                val futures =
-                    AgentType.entries.map { agentType ->
-                        CompletableFuture.supplyAsync {
-                            try {
-                                val result =
-                                    when (agentType) {
-                                        AgentType.CLAUDE -> ClaudeCodeHistoryReader.readHistory(projectPath)
-                                        AgentType.CURSOR -> CursorHistoryReader.readHistory(projectPath)
-                                        AgentType.GEMINI -> GeminiHistoryReader.readHistory(projectPath)
-                                    }.map { it.copy(agentType = agentType) }
-                                result
-                            } catch (e: Exception) {
-                                LOG.warn(
-                                    "Failed to read ${agentType.displayName} history",
-                                    e,
-                                )
-                                emptyList()
-                            }
-                        }
-                    }
-
-                val allHistory = futures.flatMap { it.join() }
+                val allHistory = AgentType.entries.flatMap { readHistoryForAgent(it, projectPath) }
                 val filtered =
                     allHistory
                         .filter { it.sessionId !in openIds }
@@ -478,6 +461,22 @@ class SessionSidebarPanel(
                     historyCardLayout.show(historyCardPanel, CARD_LIST)
                 }
             }
+        }
+    }
+
+    private fun readHistoryForAgent(
+        agentType: AgentType,
+        projectPath: String,
+    ): List<HistoricalSession> {
+        return try {
+            when (agentType) {
+                AgentType.CLAUDE -> ClaudeCodeHistoryReader.readHistory(projectPath)
+                AgentType.CURSOR -> CursorHistoryReader.readHistory(projectPath)
+                AgentType.GEMINI -> GeminiHistoryReader.readHistory(projectPath)
+            }.map { it.copy(agentType = agentType) }
+        } catch (e: Exception) {
+            LOG.warn("Failed to read ${agentType.displayName} history", e)
+            emptyList()
         }
     }
 

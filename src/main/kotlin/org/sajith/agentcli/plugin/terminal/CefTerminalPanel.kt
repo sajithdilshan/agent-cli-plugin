@@ -150,60 +150,23 @@ class CefTerminalPanel(
 
     private fun buildTerminalHtml(): String {
         val fontSize = AgentCliSettings.getInstance().terminalFontSize
-        val xtermJs = readResource("/terminal/xterm.js")
-        val xtermCss = readResource("/terminal/xterm.css")
-        val fitAddonJs = readResource("/terminal/xterm-addon-fit.js")
-        val webLinksAddonJs = readResource("/terminal/xterm-addon-web-links.js")
-        val unicode11AddonJs = readResource("/terminal/xterm-addon-unicode11.js")
-        val fontFaceCss = buildFontFaceCss()
+        val assets = TERMINAL_ASSETS
 
         val inputQueryJs = inputQuery.inject("base64")
         val resizeQueryJs = resizeQuery.inject("size")
 
         return buildCefTerminalPageHtml(
             fontSize = fontSize,
-            fontFaceCss = fontFaceCss,
-            xtermCss = xtermCss,
-            xtermJs = xtermJs,
-            fitAddonJs = fitAddonJs,
-            webLinksAddonJs = webLinksAddonJs,
-            unicode11AddonJs = unicode11AddonJs,
+            fontFaceCss = assets.fontFaceCss,
+            xtermCss = assets.xtermCss,
+            xtermJs = assets.xtermJs,
+            fitAddonJs = assets.fitAddonJs,
+            webLinksAddonJs = assets.webLinksAddonJs,
+            unicode11AddonJs = assets.unicode11AddonJs,
             inputQueryJs = inputQueryJs,
             resizeQueryJs = resizeQueryJs,
             loadingText = loadingText,
         )
-    }
-
-    private fun buildFontFaceCss(): String {
-        val regularBase64 = readResourceBase64("/fonts/InconsolataNerdFontMono-Regular.ttf")
-        // Use the regular font for both normal and bold weights to keep glyph widths
-        // identical across the monospace grid. The browser synthesizes faux-bold.
-        return """
-@font-face {
-    font-family: 'Inconsolata Nerd Font Mono';
-    src: url(data:font/truetype;base64,$regularBase64) format('truetype');
-    font-weight: 1 999;
-    font-style: normal;
-}
-        """.trim()
-    }
-
-    private fun readResourceBase64(path: String): String {
-        val stream = javaClass.getResourceAsStream(path)
-        if (stream == null) {
-            LOG.error("[AgentCLI] readResourceBase64: resource NOT FOUND at path '$path'")
-            throw IllegalStateException("Resource not found: $path")
-        }
-        return Base64.getEncoder().encodeToString(stream.readBytes())
-    }
-
-    private fun readResource(path: String): String {
-        val stream = javaClass.getResourceAsStream(path)
-        if (stream == null) {
-            LOG.error("[AgentCLI] readResource: resource NOT FOUND at path '$path'")
-            throw IllegalStateException("Resource not found: $path")
-        }
-        return stream.bufferedReader().readText()
     }
 
     fun writeToTerminal(data: ByteArray) {
@@ -267,6 +230,30 @@ class CefTerminalPanel(
     companion object {
         private val LOG = Logger.getInstance(CefTerminalPanel::class.java)
 
+        private data class TerminalAssets(
+            val xtermJs: String,
+            val xtermCss: String,
+            val fitAddonJs: String,
+            val webLinksAddonJs: String,
+            val unicode11AddonJs: String,
+            val fontFaceCss: String,
+        )
+
+        /**
+         * xterm resources and embedded font are immutable; loading them once avoids repeated
+         * disk IO and base64 encoding whenever users open additional sessions.
+         */
+        private val TERMINAL_ASSETS: TerminalAssets by lazy(LazyThreadSafetyMode.PUBLICATION) {
+            TerminalAssets(
+                xtermJs = readResource("/terminal/xterm.js"),
+                xtermCss = readResource("/terminal/xterm.css"),
+                fitAddonJs = readResource("/terminal/xterm-addon-fit.js"),
+                webLinksAddonJs = readResource("/terminal/xterm-addon-web-links.js"),
+                unicode11AddonJs = readResource("/terminal/xterm-addon-unicode11.js"),
+                fontFaceCss = buildFontFaceCss(),
+            )
+        }
+
         private val RESIZE_COLS_REGEX = Regex(""""cols"\s*:\s*(\d+)""")
         private val RESIZE_ROWS_REGEX = Regex(""""rows"\s*:\s*(\d+)""")
 
@@ -274,6 +261,38 @@ class CefTerminalPanel(
             val cols = RESIZE_COLS_REGEX.find(sizeJson)?.groupValues?.get(1)?.toInt()
             val rows = RESIZE_ROWS_REGEX.find(sizeJson)?.groupValues?.get(1)?.toInt()
             return if (cols != null && rows != null && cols > 0 && rows > 0) cols to rows else null
+        }
+
+        private fun buildFontFaceCss(): String {
+            val regularBase64 = readResourceBase64("/fonts/InconsolataNerdFontMono-Regular.ttf")
+            // Use the regular font for both normal and bold weights to keep glyph widths
+            // identical across the monospace grid. The browser synthesizes faux-bold.
+            return """
+@font-face {
+    font-family: 'Inconsolata Nerd Font Mono';
+    src: url(data:font/truetype;base64,$regularBase64) format('truetype');
+    font-weight: 1 999;
+    font-style: normal;
+}
+            """.trim()
+        }
+
+        private fun readResourceBase64(path: String): String {
+            val stream = CefTerminalPanel::class.java.getResourceAsStream(path)
+            if (stream == null) {
+                LOG.error("[AgentCLI] readResourceBase64: resource NOT FOUND at path '$path'")
+                throw IllegalStateException("Resource not found: $path")
+            }
+            return stream.use { Base64.getEncoder().encodeToString(it.readBytes()) }
+        }
+
+        private fun readResource(path: String): String {
+            val stream = CefTerminalPanel::class.java.getResourceAsStream(path)
+            if (stream == null) {
+                LOG.error("[AgentCLI] readResource: resource NOT FOUND at path '$path'")
+                throw IllegalStateException("Resource not found: $path")
+            }
+            return stream.bufferedReader().use { it.readText() }
         }
     }
 }

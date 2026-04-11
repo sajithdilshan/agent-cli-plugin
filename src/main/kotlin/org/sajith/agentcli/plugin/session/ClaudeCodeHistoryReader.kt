@@ -18,13 +18,13 @@ object ClaudeCodeHistoryReader {
         val claudeDir = File(System.getProperty("user.home"), ".claude/projects")
         if (!claudeDir.exists()) return emptyList()
 
-        val normalizedPath = projectPath.trimEnd('/')
-        val encodedPath = normalizedPath.replace("/", "-")
-
-        val projectDir = resolveProjectHistoryDirectory(claudeDir, encodedPath) ?: return emptyList()
+        val encodedPath = SessionPathResolver.encodeClaudeProjectPath(projectPath)
+        val projectDir = SessionPathResolver.resolveProjectDirectory(claudeDir, encodedPath) ?: return emptyList()
         val jsonlFiles = projectDir.listFiles { file -> file.extension == "jsonl" } ?: emptyArray()
 
-        return jsonlFiles.toList().parallelStream()
+        return jsonlFiles
+            .toList()
+            .parallelStream()
             .map { file ->
                 try {
                     parseSessionFile(file)
@@ -37,16 +37,6 @@ object ClaudeCodeHistoryReader {
             .map { it!! }
             .toList()
             .sortedByDescending { it.timestamp }
-    }
-
-    private fun resolveProjectHistoryDirectory(
-        claudeDir: File,
-        encodedPath: String,
-    ): File? {
-        val direct = claudeDir.resolve(encodedPath)
-        if (direct.exists() && direct.isDirectory) return direct
-
-        return claudeDir.listFiles { f -> f.isDirectory }?.firstOrNull { it.name == encodedPath }
     }
 
     /**
@@ -97,7 +87,10 @@ object ClaudeCodeHistoryReader {
      * Extracts a single top-level string field from a JSON line using GSON streaming.
      * Skips all other fields without allocating objects — O(1) memory for non-target fields.
      */
-    private fun extractFieldStreaming(line: String, targetKey: String): String {
+    private fun extractFieldStreaming(
+        line: String,
+        targetKey: String,
+    ): String {
         try {
             JsonReader(StringReader(line)).use { reader ->
                 reader.beginObject()

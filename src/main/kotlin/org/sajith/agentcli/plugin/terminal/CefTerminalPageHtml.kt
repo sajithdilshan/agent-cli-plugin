@@ -189,7 +189,7 @@ internal fun buildCefTerminalPageHtml(
                 <div class="robot-ear robot-ear-left"></div>
                 <div class="robot-ear robot-ear-right"></div>
             </div>
-            <div class="loading-text">${loadingText}</div>
+            <div class="loading-text">$loadingText</div>
         </div>
     </div>
     <div id="terminal"></div>

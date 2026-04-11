@@ -17,16 +17,16 @@ object CursorHistoryReader {
         val cursorDir = File(System.getProperty("user.home"), ".cursor/projects")
         if (!cursorDir.exists()) return emptyList()
 
-        val normalizedPath = projectPath.trimEnd('/')
-        val encodedPath = normalizedPath.replace("/", "-").removePrefix("-")
-
-        val projectDir = resolveProjectDirectory(cursorDir, encodedPath) ?: return emptyList()
+        val encodedPath = SessionPathResolver.encodeCursorProjectPath(projectPath)
+        val projectDir = SessionPathResolver.resolveProjectDirectory(cursorDir, encodedPath) ?: return emptyList()
         val transcriptsDir = projectDir.resolve("agent-transcripts")
         if (!transcriptsDir.exists()) return emptyList()
 
         val sessionDirs = transcriptsDir.listFiles { f -> f.isDirectory } ?: emptyArray()
 
-        return sessionDirs.toList().parallelStream()
+        return sessionDirs
+            .toList()
+            .parallelStream()
             .map { dir ->
                 val jsonlFile = dir.resolve("${dir.name}.jsonl")
                 if (!jsonlFile.exists()) return@map null
@@ -41,16 +41,6 @@ object CursorHistoryReader {
             .map { it!! }
             .toList()
             .sortedByDescending { it.timestamp }
-    }
-
-    private fun resolveProjectDirectory(
-        cursorDir: File,
-        encodedPath: String,
-    ): File? {
-        val direct = cursorDir.resolve(encodedPath)
-        if (direct.exists() && direct.isDirectory) return direct
-
-        return cursorDir.listFiles { f -> f.isDirectory }?.firstOrNull { it.name == encodedPath }
     }
 
     private fun parseSessionFile(file: File): HistoricalSession? {
@@ -73,10 +63,11 @@ object CursorHistoryReader {
             }
         }
 
-        val timestamp = LocalDateTime.ofInstant(
-            Instant.ofEpochMilli(file.lastModified()),
-            ZoneId.systemDefault(),
-        )
+        val timestamp =
+            LocalDateTime.ofInstant(
+                Instant.ofEpochMilli(file.lastModified()),
+                ZoneId.systemDefault(),
+            )
 
         return HistoricalSession(
             sessionId = sessionId,
@@ -94,7 +85,6 @@ object CursorHistoryReader {
         try {
             var role: String? = null
             var message: String? = null
-            var isMessageComplex = false
 
             JsonReader(StringReader(line)).use { reader ->
                 reader.beginObject()
@@ -106,7 +96,6 @@ object CursorHistoryReader {
                                 message = reader.nextString()
                             } else if (reader.peek() == JsonToken.BEGIN_OBJECT) {
                                 message = extractContentFromMessageObject(reader)
-                                isMessageComplex = true
                             } else {
                                 reader.skipValue()
                             }

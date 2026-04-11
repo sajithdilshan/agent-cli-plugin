@@ -1,6 +1,5 @@
 package org.sajith.agentcli.plugin.session
 
-import com.google.gson.JsonParser
 import com.intellij.openapi.diagnostic.Logger
 import org.sajith.agentcli.plugin.AgentType
 import java.io.File
@@ -32,8 +31,8 @@ object SessionHistoryDeleter {
         val claudeDir = File(System.getProperty("user.home"), ".claude/projects")
         if (!claudeDir.exists()) return false
 
-        val encodedPath = projectPath.trimEnd('/').replace("/", "-")
-        val projectDir = resolveDirectory(claudeDir, encodedPath) ?: return false
+        val encodedPath = SessionPathResolver.encodeClaudeProjectPath(projectPath)
+        val projectDir = SessionPathResolver.resolveProjectDirectory(claudeDir, encodedPath) ?: return false
 
         val sessionFile = projectDir.resolve("$sessionId.jsonl")
         if (!sessionFile.exists()) return false
@@ -50,8 +49,8 @@ object SessionHistoryDeleter {
         val cursorDir = File(System.getProperty("user.home"), ".cursor/projects")
         if (!cursorDir.exists()) return false
 
-        val encodedPath = projectPath.trimEnd('/').replace("/", "-").removePrefix("-")
-        val projectDir = resolveDirectory(cursorDir, encodedPath) ?: return false
+        val encodedPath = SessionPathResolver.encodeCursorProjectPath(projectPath)
+        val projectDir = SessionPathResolver.resolveProjectDirectory(cursorDir, encodedPath) ?: return false
 
         val sessionDir = projectDir.resolve("agent-transcripts/$sessionId")
         if (!sessionDir.exists() || !sessionDir.isDirectory) return false
@@ -68,7 +67,7 @@ object SessionHistoryDeleter {
         val geminiDir = File(System.getProperty("user.home"), ".gemini")
         if (!geminiDir.exists()) return false
 
-        val projectName = resolveGeminiProjectName(geminiDir, projectPath) ?: return false
+        val projectName = SessionPathResolver.resolveGeminiProjectName(geminiDir, projectPath) ?: return false
         val chatsDir = geminiDir.resolve("tmp/$projectName/chats")
         if (!chatsDir.exists()) return false
 
@@ -78,30 +77,5 @@ object SessionHistoryDeleter {
         val deleted = sessionFile.delete()
         LOG.info("[AgentCLI] Deleted Gemini session file: ${sessionFile.absolutePath} — $deleted")
         return deleted
-    }
-
-    private fun resolveDirectory(
-        baseDir: File,
-        encodedPath: String,
-    ): File? {
-        val direct = baseDir.resolve(encodedPath)
-        if (direct.exists() && direct.isDirectory) return direct
-        return baseDir.listFiles { f -> f.isDirectory }?.firstOrNull { it.name == encodedPath }
-    }
-
-    private fun resolveGeminiProjectName(
-        geminiDir: File,
-        projectPath: String,
-    ): String? {
-        val projectsFile = geminiDir.resolve("projects.json")
-        if (!projectsFile.exists()) return null
-        return try {
-            val root = JsonParser.parseString(projectsFile.readText()).asJsonObject
-            val projects = root.getAsJsonObject("projects") ?: return null
-            projects.get(projectPath.trimEnd('/'))?.asString
-        } catch (e: Exception) {
-            LOG.warn("[AgentCLI] Failed to parse Gemini projects.json", e)
-            null
-        }
     }
 }
