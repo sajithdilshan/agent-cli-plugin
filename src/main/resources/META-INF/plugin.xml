@@ -1,8 +1,8 @@
 <idea-plugin>
     <id>org.sajith.agentcli.plugin</id>
     <name>Agent CLI</name>
-    <version>0.3.0</version>
-    <vendor>org.sajith</vendor>
+    <version>0.4.0</version>
+    <vendor>Sajith Edirisinghe</vendor>
 
     <description><![CDATA[
     <ul>
