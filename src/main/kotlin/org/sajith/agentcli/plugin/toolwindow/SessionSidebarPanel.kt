@@ -24,6 +24,7 @@ import org.sajith.agentcli.plugin.session.CursorHistoryReader
 import org.sajith.agentcli.plugin.session.GeminiHistoryReader
 import org.sajith.agentcli.plugin.session.HistoricalSession
 import org.sajith.agentcli.plugin.session.SessionManager
+import org.sajith.agentcli.plugin.settings.AgentCliSettings
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.Component
@@ -153,9 +154,10 @@ class SessionSidebarPanel(
         e: AnActionEvent,
         onSelected: (AgentType) -> Unit,
     ) {
+        val enabledAgents = AgentCliSettings.getInstance().enabledAgentTypes
         val group =
             DefaultActionGroup().apply {
-                AgentType.entries.forEach { agentType ->
+                enabledAgents.forEach { agentType ->
                     add(
                         object : AnAction(agentType.displayName) {
                             override fun actionPerformed(e: AnActionEvent) {
@@ -428,12 +430,13 @@ class SessionSidebarPanel(
         ApplicationManager.getApplication().executeOnPooledThread {
             try {
                 val sessionManager = SessionManager.getInstance(project)
+                val enabledAgents = AgentCliSettings.getInstance().enabledAgentTypes
                 val openIds = mutableSetOf<String>()
-                AgentType.entries.forEach { agentType ->
+                enabledAgents.forEach { agentType ->
                     openIds.addAll(sessionManager.getOpenSessionIds(agentType))
                 }
 
-                val allHistory = AgentType.entries.flatMap { readHistoryForAgent(it, projectPath) }
+                val allHistory = enabledAgents.flatMap { readHistoryForAgent(it, projectPath) }
                 val filtered =
                     allHistory
                         .filter { it.sessionId !in openIds }

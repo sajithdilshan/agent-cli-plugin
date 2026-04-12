@@ -64,6 +64,15 @@ class AgentCliPanel(
                     terminalPanels.values.forEach { it.applyTheme() }
                 },
             )
+
+        // Reload history when agent settings change (e.g. agents enabled/disabled).
+        ApplicationManager.getApplication().messageBus.connect(parentDisposable)
+            .subscribe(
+                AgentCliSettings.SETTINGS_CHANGED_TOPIC,
+                AgentCliSettings.SettingsChangeListener {
+                    sidebar.loadHistory()
+                },
+            )
     }
 
     fun createNewSession(agentType: AgentType = AgentType.CLAUDE) {
