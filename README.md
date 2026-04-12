@@ -97,7 +97,7 @@ Platform version and IDE type (e.g. IntelliJ Community vs other IDEs) are contro
 
 ## Version
 
-Plugin version is **`0.4.0`** (see `gradle.properties` and `plugin.xml`).
+Plugin version is **`0.5.0`** (see `gradle.properties` and `plugin.xml`).
 
 ## License
 
