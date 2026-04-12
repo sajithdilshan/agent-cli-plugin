@@ -17,7 +17,7 @@ object SessionHistoryDeleter {
                 AgentType.CLAUDE -> deleteClaudeSession(sessionId, projectPath)
                 AgentType.CURSOR -> deleteCursorSession(sessionId, projectPath)
                 AgentType.GEMINI -> deleteGeminiSession(sessionId, projectPath)
-                AgentType.CODEX -> false
+                AgentType.CODEX -> deleteCodexSession(sessionId)
             }
         } catch (e: Exception) {
             LOG.warn("[AgentCLI] Failed to delete $agentType session $sessionId", e)
@@ -59,6 +59,18 @@ object SessionHistoryDeleter {
         val deleted = sessionDir.deleteRecursively()
         LOG.info("[AgentCLI] Deleted Cursor session directory: ${sessionDir.absolutePath} — $deleted")
         return deleted
+    }
+
+    private fun deleteCodexSession(sessionId: String): Boolean {
+        val sessionFile = CodexHistoryReader.findSessionFile(sessionId)
+        var fileDeleted = false
+        if (sessionFile != null && sessionFile.exists()) {
+            fileDeleted = sessionFile.delete()
+            LOG.info("[AgentCLI] Deleted Codex session file: ${sessionFile.absolutePath} — $fileDeleted")
+        }
+        val indexUpdated = CodexHistoryReader.removeFromIndex(sessionId)
+        LOG.info("[AgentCLI] Removed Codex session from index: $sessionId — $indexUpdated")
+        return fileDeleted || indexUpdated
     }
 
     private fun deleteGeminiSession(

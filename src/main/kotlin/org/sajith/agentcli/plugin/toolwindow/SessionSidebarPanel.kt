@@ -19,6 +19,7 @@ import com.intellij.util.ui.JBUI
 import org.sajith.agentcli.plugin.AgentType
 import org.sajith.agentcli.plugin.session.AgentCliSession
 import org.sajith.agentcli.plugin.session.ClaudeCodeHistoryReader
+import org.sajith.agentcli.plugin.session.CodexHistoryReader
 import org.sajith.agentcli.plugin.session.CursorHistoryReader
 import org.sajith.agentcli.plugin.session.GeminiHistoryReader
 import org.sajith.agentcli.plugin.session.HistoricalSession
@@ -473,7 +474,7 @@ class SessionSidebarPanel(
                 AgentType.CLAUDE -> ClaudeCodeHistoryReader.readHistory(projectPath)
                 AgentType.CURSOR -> CursorHistoryReader.readHistory(projectPath)
                 AgentType.GEMINI -> GeminiHistoryReader.readHistory(projectPath)
-                AgentType.CODEX -> emptyList()
+                AgentType.CODEX -> CodexHistoryReader.readHistory(projectPath)
             }.map { it.copy(agentType = agentType) }
         } catch (e: Exception) {
             LOG.warn("Failed to read ${agentType.displayName} history", e)

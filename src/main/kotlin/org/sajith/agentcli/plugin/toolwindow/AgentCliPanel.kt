@@ -79,7 +79,12 @@ class AgentCliPanel(
     ) {
         val cmd = getCommand(agentType)
         val session = sessionManager.createSession(title, agentType = agentType, agentSessionId = sessionId)
-        createTerminalForSession(session, "$cmd --resume $sessionId", isResume = true)
+        val resumeCmd =
+            when (agentType) {
+                AgentType.CODEX -> "$cmd resume $sessionId"
+                else -> "$cmd --resume $sessionId"
+            }
+        createTerminalForSession(session, resumeCmd, isResume = true)
     }
 
     private fun getCommand(agentType: AgentType): String {
