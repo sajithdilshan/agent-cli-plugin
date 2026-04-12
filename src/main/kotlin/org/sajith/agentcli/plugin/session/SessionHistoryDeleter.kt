@@ -17,6 +17,7 @@ object SessionHistoryDeleter {
                 AgentType.CLAUDE -> deleteClaudeSession(sessionId, projectPath)
                 AgentType.CURSOR -> deleteCursorSession(sessionId, projectPath)
                 AgentType.GEMINI -> deleteGeminiSession(sessionId, projectPath)
+                AgentType.CODEX -> false
             }
         } catch (e: Exception) {
             LOG.warn("[AgentCLI] Failed to delete $agentType session $sessionId", e)

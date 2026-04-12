@@ -88,6 +88,7 @@ class AgentCliPanel(
             AgentType.CLAUDE -> settings.claudeCommand
             AgentType.CURSOR -> settings.cursorCommand
             AgentType.GEMINI -> settings.geminiCommand
+            AgentType.CODEX -> settings.codexCommand
         }
     }
 

@@ -473,6 +473,7 @@ class SessionSidebarPanel(
                 AgentType.CLAUDE -> ClaudeCodeHistoryReader.readHistory(projectPath)
                 AgentType.CURSOR -> CursorHistoryReader.readHistory(projectPath)
                 AgentType.GEMINI -> GeminiHistoryReader.readHistory(projectPath)
+                AgentType.CODEX -> emptyList()
             }.map { it.copy(agentType = agentType) }
         } catch (e: Exception) {
             LOG.warn("Failed to read ${agentType.displayName} history", e)

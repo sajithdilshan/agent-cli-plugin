@@ -38,6 +38,14 @@ class AgentCliSettingsConfigurable : BoundSearchableConfigurable(
                         .comment("The CLI command to launch Gemini CLI (e.g. gemini)")
                 }
             }
+            group("OpenAI Codex") {
+                row("Codex command:") {
+                    textField()
+                        .columns(20)
+                        .bindText(settings::codexCommand)
+                        .comment("The CLI command to launch OpenAI Codex (e.g. codex)")
+                }
+            }
             group("Terminal") {
                 row("Font size:") {
                     intTextField(8..32)
