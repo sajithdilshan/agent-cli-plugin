@@ -397,7 +397,7 @@ class SessionSidebarPanel(
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             background = JBColor.PanelBackground
             add(javax.swing.Box.createVerticalGlue())
-            dotsLabel.alignmentX = Component.CENTER_ALIGNMENT
+            dotsLabel.alignmentX = CENTER_ALIGNMENT
             add(dotsLabel)
             add(javax.swing.Box.createVerticalGlue())
         }
