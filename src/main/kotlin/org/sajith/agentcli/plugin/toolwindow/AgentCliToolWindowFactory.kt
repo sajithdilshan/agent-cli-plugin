@@ -11,6 +11,9 @@ import javax.swing.JLabel
 import javax.swing.SwingConstants
 
 class AgentCliToolWindowFactory : ToolWindowFactory, DumbAware {
+    @Deprecated("Use condition attribute in plugin.xml", level = DeprecationLevel.WARNING)
+    override fun isApplicable(project: Project): Boolean = true
+
     override fun createToolWindowContent(
         project: Project,
         toolWindow: ToolWindow,

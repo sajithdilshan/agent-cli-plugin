@@ -22,6 +22,7 @@
                     anchor="right"
                     secondary="false"
                     canCloseContents="false"
+                    doNotActivateOnStart="true"
                     factoryClass="org.sajith.agentcli.plugin.toolwindow.AgentCliToolWindowFactory"
                     icon="/icons/agent-cli.svg"/>
 
