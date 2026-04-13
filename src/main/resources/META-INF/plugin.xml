@@ -7,13 +7,27 @@
     <description><![CDATA[
     <ul>
         <li>Agent CLI tool window with an embedded terminal and a compact session sidebar.</li>
-        <li>Support for Claude Code, Cursor agent, and Gemini CLI — start a session for the agent you use from the + menu.</li>
+        <li>Support for Claude Code, Cursor agent, OpenAI Codex and Gemini CLI — start a session for the agent you use from the + menu.</li>
         <li>Multiple sessions — create, switch, and close sessions; session history for the current project with resume by session ID where local agent data is available.</li>
         <li>Theme-aware terminal — colors follow the IDE look-and-feel where applicable.</li>
         <li>Settings (Settings → Tools → Agent CLI) — configure each agent's launch command and terminal font size.</li>
     </ul>
     <p><em>Note: A JetBrains Runtime with JCEF is required for the embedded terminal. Install and sign in to each agent CLI you use separately.</em></p>
     ]]></description>
+
+    <change-notes><![CDATA[
+    <h3>0.5.1</h3>
+    <ul>
+        <li>Fixed the timer logic in the history panel.</li>
+        <li>Shipped follow-up metadata and documentation updates as part of the patch release.</li>
+        <li>Added Codex as a supported agent type across the plugin.</li>
+        <li>Added a dedicated Codex history reader and wired Codex sessions into the sidebar, panel, and deletion flow.</li>
+        <li>Expanded settings and internal architecture to support the new agent cleanly.</li>
+        <li>Optimized history file parsing across supported agents to improve responsiveness.</li>
+        <li>Added a loading screen for terminal initialization and history-related UI states.</li>
+        <li>Fixed rendering and parsing issues in the terminal and history UI.</li>
+    </ul>
+    ]]></change-notes>
 
     <depends>com.intellij.modules.platform</depends>
 
