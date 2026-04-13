@@ -76,6 +76,7 @@ class SessionSidebarPanel(
 
     private val historyCardLayout = CardLayout()
     private val historyCardPanel = JPanel(historyCardLayout)
+    private var loadingTimer: Timer? = null
 
     private val sessionListPanel: JPanel
     private var isCollapsed = false
@@ -387,7 +388,7 @@ class SessionSidebarPanel(
         // Animate dots: "Loading sessions", "Loading sessions.", "Loading sessions..", "Loading sessions..."
         val dotStates = arrayOf("", ".", "..", "...")
         var dotIndex = 0
-        Timer(400) {
+        loadingTimer = Timer(400) {
             dotIndex = (dotIndex + 1) % dotStates.size
             dotsLabel.text = "Loading sessions${dotStates[dotIndex]}"
         }.apply {
@@ -421,6 +422,7 @@ class SessionSidebarPanel(
 
         if (isInitialLoad) {
             SwingUtilities.invokeLater {
+                loadingTimer?.start()
                 historyCardLayout.show(historyCardPanel, CARD_LOADING)
             }
         }
@@ -452,6 +454,7 @@ class SessionSidebarPanel(
                 }
 
                 SwingUtilities.invokeLater {
+                    loadingTimer?.stop()
                     historyListModel.clear()
                     grouped.forEach { (header, sessions) ->
                         historyListModel.addElement(SidebarItem.Header(header))
@@ -462,6 +465,7 @@ class SessionSidebarPanel(
             } catch (e: Exception) {
                 LOG.warn("Failed to load history", e)
                 SwingUtilities.invokeLater {
+                    loadingTimer?.stop()
                     historyCardLayout.show(historyCardPanel, CARD_LIST)
                 }
             }
