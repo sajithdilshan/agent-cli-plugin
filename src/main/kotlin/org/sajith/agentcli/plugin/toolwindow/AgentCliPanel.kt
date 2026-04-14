@@ -45,6 +45,7 @@ class AgentCliPanel(
     private var savedProportion = 0.2f
 
     init {
+        Disposer.register(parentDisposable, sidebar)
         splitter.firstComponent = sidebar
         splitter.secondComponent = terminalPanel
         sidebar.onCollapseToggle = { collapsed ->
@@ -166,6 +167,7 @@ class AgentCliPanel(
                 onOutput = { data -> flowController.write(data) },
                 onExit = { },
             )
+        Disposer.register(parentDisposable, ptyBridge)
 
         terminalPanels[session.id] = cefPanel
         ptyBridges[session.id] = ptyBridge

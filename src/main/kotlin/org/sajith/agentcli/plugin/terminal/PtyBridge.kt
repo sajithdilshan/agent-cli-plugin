@@ -127,6 +127,11 @@ class PtyBridge(
             resume()
             readerThread?.interrupt()
             try {
+                readerThread?.join(1000)
+            } catch (_: InterruptedException) {
+                // Caller was interrupted while waiting; proceed with cleanup.
+            }
+            try {
                 process?.destroy()
             } catch (e: Exception) {
                 LOG.warn("[AgentCLI] PtyBridge: error destroying process", e)

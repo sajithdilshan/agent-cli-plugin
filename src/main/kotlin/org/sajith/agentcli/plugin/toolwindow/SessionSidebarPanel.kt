@@ -2,6 +2,7 @@ package org.sajith.agentcli.plugin.toolwindow
 
 import com.intellij.icons.AllIcons
 import com.intellij.ide.DataManager
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.AnAction
@@ -66,7 +67,7 @@ class SessionSidebarPanel(
     private val onSessionDeleted: (AgentCliSession) -> Unit,
     private val onResumeSession: (agentType: AgentType, sessionId: String, title: String?) -> Unit,
     private val onHistorySessionDeleted: (HistoricalSession) -> Unit,
-) : JPanel(BorderLayout()) {
+) : JPanel(BorderLayout()), Disposable {
     private val activeSessionListModel = DefaultListModel<AgentCliSession>()
     private val activeSessionList = JBList(activeSessionListModel)
     private var selectedSession: AgentCliSession? = null
@@ -538,6 +539,11 @@ class SessionSidebarPanel(
             selectedSession = session
             historyList.clearSelection()
         }
+    }
+
+    override fun dispose() {
+        loadingTimer?.stop()
+        loadingTimer = null
     }
 
     // ── Cell renderers ──

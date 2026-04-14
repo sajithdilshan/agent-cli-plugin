@@ -50,6 +50,8 @@ class CefTerminalPanel(
     /** Swing timer to debounce componentResized events. */
     private val resizeDebounceTimer = Timer(200) { onResizeSettled() }.apply { isRepeats = false }
 
+    private val resizeListener: ComponentAdapter
+
     val component: JComponent get() = browser.component
 
     init {
@@ -160,14 +162,14 @@ class CefTerminalPanel(
 
         // Listen to Swing component resize — this fires when the IDE resizes the tool window.
         // We debounce and only call JS once the resize gesture settles.
-        browser.component.addComponentListener(
+        resizeListener =
             object : ComponentAdapter() {
                 override fun componentResized(e: ComponentEvent) {
                     if (!resizeEnabledState || !isPageLoaded) return
                     resizeDebounceTimer.restart()
                 }
-            },
-        )
+            }
+        browser.component.addComponentListener(resizeListener)
 
         val html = buildTerminalHtml()
         browser.loadHTML(html)
@@ -275,6 +277,7 @@ class CefTerminalPanel(
 
     override fun dispose() {
         resizeDebounceTimer.stop()
+        browser.component.removeComponentListener(resizeListener)
         Disposer.dispose(inputQuery)
         Disposer.dispose(resizeQuery)
         Disposer.dispose(openLinkQuery)
