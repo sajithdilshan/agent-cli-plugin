@@ -40,7 +40,7 @@ class PtyBridge(
 
         readerThread =
             Thread({
-                val buffer = ByteArray(8192)
+                val buffer = ByteArray(32768)
                 val inputStream = process!!.inputStream
                 var totalBytesRead = 0L
                 try {

@@ -130,6 +130,9 @@ class AgentCliPanel(
 
         flowController =
             TerminalFlowController(
+                highWatermark = 8,
+                lowWatermark = 3,
+                callbackByteLimit = 200_000,
                 onWrite = { data, needsAck ->
                     if (needsAck) {
                         cefPanel.writeToTerminalAck(data)
