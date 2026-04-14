@@ -283,19 +283,21 @@ internal fun buildCefTerminalPageHtml(
 
         // ── Window bridge functions called from Java ──────────────────
 
-        // Dismiss loading overlay on the first terminal write.
+        // Dismiss loading overlay 1s after the first terminal write.
         // With `exec`, the PTY process IS the agent CLI so the
-        // first output byte means the agent has started.
-        var overlayDismissed = false;
+        // first output byte means the agent has started. The extra
+        // second lets the terminal settle before the overlay fades.
+        var overlayDismissTimer = null;
 
-        function dismissOverlay() {
-            if (overlayDismissed) return;
-            overlayDismissed = true;
-            var overlay = document.getElementById('loading-overlay');
-            if (overlay) {
-                overlay.classList.add('fade-out');
-                setTimeout(function() { overlay.remove(); }, 400);
-            }
+        function scheduleDismissOverlay() {
+            if (overlayDismissTimer !== null) return;
+            overlayDismissTimer = setTimeout(function() {
+                var overlay = document.getElementById('loading-overlay');
+                if (overlay) {
+                    overlay.classList.add('fade-out');
+                    setTimeout(function() { overlay.remove(); }, 400);
+                }
+            }, 1000);
         }
 
         // Decode Base64 PTY output into a Uint8Array.
@@ -309,7 +311,7 @@ internal fun buildCefTerminalPageHtml(
         }
 
         function onWriteComplete() {
-            dismissOverlay();
+            scheduleDismissOverlay();
             if (Date.now() < postResizeScrollDeadline) {
                 if (postResizeSettleTimer) { clearTimeout(postResizeSettleTimer); }
                 postResizeSettleTimer = setTimeout(function() {
