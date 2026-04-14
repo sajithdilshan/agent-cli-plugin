@@ -297,7 +297,7 @@ internal fun buildCefTerminalPageHtml(
                     overlay.classList.add('fade-out');
                     setTimeout(function() { overlay.remove(); }, 400);
                 }
-            }, 1000);
+            }, 2000);
         }
 
         // Decode Base64 PTY output into a Uint8Array.
