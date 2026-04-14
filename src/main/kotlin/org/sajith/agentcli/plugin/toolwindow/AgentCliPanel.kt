@@ -6,6 +6,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.wm.ToolWindow
 import com.intellij.ui.OnePixelSplitter
 import org.sajith.agentcli.plugin.AgentType
 import org.sajith.agentcli.plugin.session.AgentCliSession
@@ -22,6 +23,7 @@ import javax.swing.SwingUtilities
 
 class AgentCliPanel(
     private val project: Project,
+    private val toolWindow: ToolWindow,
     private val parentDisposable: Disposable,
 ) : JPanel(BorderLayout()) {
     private val sessionManager = SessionManager.getInstance(project)
@@ -188,6 +190,7 @@ class AgentCliPanel(
         cefPanel.setResizeEnabled(true)
 
         terminalCardLayout.show(terminalPanel, session.id)
+        updateToolWindowTitle()
 
         ApplicationManager.getApplication().executeOnPooledThread {
             try {
@@ -219,6 +222,7 @@ class AgentCliPanel(
             terminalCardLayout.show(terminalPanel, session.id)
             sidebar.selectSession(session)
             terminalPanels[session.id]?.focus()
+            updateToolWindowTitle()
         } else {
             LOG.warn("[AgentCLI] switchToSession: no terminal panel found for session ${session.id}")
         }
@@ -271,6 +275,7 @@ class AgentCliPanel(
         activeSessionId?.let { id ->
             sessionManager.sessions.find { it.id == id }?.let { sidebar.selectSession(it) }
         }
+        updateToolWindowTitle()
     }
 
     private fun deleteSession(session: AgentCliSession) {
@@ -291,6 +296,11 @@ class AgentCliPanel(
                 projectPath,
             )
         }
+    }
+
+    private fun updateToolWindowTitle() {
+        val session = activeSessionId?.let { id -> sessionManager.sessions.find { it.id == id } }
+        toolWindow.stripeTitle = if (session != null) "Agent CLI - ${session.displayName}" else "Agent CLI"
     }
 
     companion object {

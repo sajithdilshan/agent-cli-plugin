@@ -32,7 +32,7 @@ class AgentCliToolWindowFactory : ToolWindowFactory, DumbAware {
         }
 
         LOG.info("[AgentCLI] createToolWindowContent START")
-        val panel = AgentCliPanel(project, toolWindow.disposable)
+        val panel = AgentCliPanel(project, toolWindow, toolWindow.disposable)
         val content = ContentFactory.getInstance().createContent(panel, "", false)
         toolWindow.contentManager.addContent(content)
         LOG.info("[AgentCLI] createToolWindowContent END")
