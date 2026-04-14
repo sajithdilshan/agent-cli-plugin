@@ -15,6 +15,7 @@ internal fun buildCefTerminalPageHtml(
     inputQueryJs: String,
     resizeQueryJs: String,
     openLinkQueryJs: String,
+    ackQueryJs: String,
     loadingText: String = "Starting Session...",
 ): String =
     """
@@ -308,26 +309,51 @@ internal fun buildCefTerminalPageHtml(
             }, 500);
         }, 2000);
 
-        // Write PTY output (Base64 encoded)
+        // Decode Base64 PTY output into a Uint8Array.
+        function decodeBase64ToBytes(base64Data) {
+            var binary = atob(base64Data);
+            var bytes = new Uint8Array(binary.length);
+            for (var i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes;
+        }
+
+        function onWriteComplete() {
+            lastOutputTime = Date.now();
+            if (Date.now() < postResizeScrollDeadline) {
+                if (postResizeSettleTimer) { clearTimeout(postResizeSettleTimer); }
+                postResizeSettleTimer = setTimeout(function() {
+                    postResizeSettleTimer = null;
+                    term.scrollToBottom();
+                }, 150);
+            }
+        }
+
+        // Fast-path write: no ack callback, minimal overhead.
         window.writeTerminalData = function(base64Data) {
             try {
-                var binary = atob(base64Data);
-                var bytes = new Uint8Array(binary.length);
-                for (var i = 0; i < binary.length; i++) {
-                    bytes[i] = binary.charCodeAt(i);
-                }
-                term.write(bytes, function() {
-                    lastOutputTime = Date.now();
-                    if (Date.now() < postResizeScrollDeadline) {
-                        if (postResizeSettleTimer) { clearTimeout(postResizeSettleTimer); }
-                        postResizeSettleTimer = setTimeout(function() {
-                            postResizeSettleTimer = null;
-                            term.scrollToBottom();
-                        }, 150);
+                term.write(decodeBase64ToBytes(base64Data), onWriteComplete);
+            } catch(e) {
+                console.error('writeTerminalData error:', e);
+            }
+        };
+
+        // Ack-path write: attaches a term.write callback that signals the
+        // Kotlin side when xterm.js has finished processing this chunk.
+        window.writeTerminalDataAck = function(base64Data) {
+            try {
+                term.write(decodeBase64ToBytes(base64Data), function() {
+                    onWriteComplete();
+                    try {
+                        var ack = '1';
+                        $ackQueryJs
+                    } catch(e) {
+                        console.error('ack notify error:', e);
                     }
                 });
             } catch(e) {
-                console.error('writeTerminalData error:', e);
+                console.error('writeTerminalDataAck error:', e);
             }
         };
 

@@ -14,6 +14,7 @@ import org.sajith.agentcli.plugin.session.SessionManager
 import org.sajith.agentcli.plugin.settings.AgentCliSettings
 import org.sajith.agentcli.plugin.terminal.CefTerminalPanel
 import org.sajith.agentcli.plugin.terminal.PtyBridge
+import org.sajith.agentcli.plugin.terminal.TerminalFlowController
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import javax.swing.JPanel
@@ -114,13 +115,28 @@ class AgentCliPanel(
         val workingDir = project.basePath ?: System.getProperty("user.home")
 
         lateinit var ptyBridge: PtyBridge
+        lateinit var flowController: TerminalFlowController
 
         val cefPanel =
             CefTerminalPanel(
                 parentDisposable = parentDisposable,
                 onInput = { data -> ptyBridge.write(data) },
                 onResize = { cols, rows -> ptyBridge.resize(cols, rows) },
+                onAck = { flowController.ack() },
                 loadingText = if (isResume) "Resuming Session..." else "Starting Session...",
+            )
+
+        flowController =
+            TerminalFlowController(
+                onWrite = { data, needsAck ->
+                    if (needsAck) {
+                        cefPanel.writeToTerminalAck(data)
+                    } else {
+                        cefPanel.writeToTerminal(data)
+                    }
+                },
+                onPause = { ptyBridge.pause() },
+                onResume = { ptyBridge.resume() },
             )
 
         val shellCommand = shellInvocation()
@@ -147,7 +163,7 @@ class AgentCliPanel(
                 command = shellCommand,
                 workingDirectory = workingDir,
                 environment = env,
-                onOutput = { data -> cefPanel.writeToTerminal(data) },
+                onOutput = { data -> flowController.write(data) },
                 onExit = { },
             )
 

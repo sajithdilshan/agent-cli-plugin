@@ -25,16 +25,21 @@ class CefTerminalPanel(
     parentDisposable: Disposable,
     private val onInput: (String) -> Unit,
     private val onResize: (cols: Int, rows: Int) -> Unit,
+    private val onAck: () -> Unit = {},
     private val loadingText: String = "Starting Session...",
 ) : Disposable {
     private val browser: JBCefBrowser = JBCefBrowser()
     private val inputQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
     private val resizeQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
     private val openLinkQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
+    private val ackQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
 
     @Volatile
     private var isPageLoaded = false
-    private val pendingWrites = mutableListOf<String>()
+
+    private data class PendingWrite(val base64: String, val needsAck: Boolean)
+
+    private val pendingWrites = mutableListOf<PendingWrite>()
 
     @Volatile
     private var pendingFocus = false
@@ -85,6 +90,15 @@ class CefTerminalPanel(
                 }
             } catch (e: Exception) {
                 LOG.warn("[AgentCLI] CefTerminalPanel: invalid link URL: $url", e)
+            }
+            JBCefJSQuery.Response("")
+        }
+
+        ackQuery.addHandler {
+            try {
+                onAck()
+            } catch (e: Exception) {
+                LOG.warn("[AgentCLI] CefTerminalPanel: ack handler error", e)
             }
             JBCefJSQuery.Response("")
         }
@@ -173,6 +187,7 @@ class CefTerminalPanel(
         val inputQueryJs = inputQuery.inject("base64")
         val resizeQueryJs = resizeQuery.inject("size")
         val openLinkQueryJs = openLinkQuery.inject("uri")
+        val ackQueryJs = ackQuery.inject("ack")
 
         return buildCefTerminalPageHtml(
             fontSize = fontSize,
@@ -185,17 +200,31 @@ class CefTerminalPanel(
             inputQueryJs = inputQueryJs,
             resizeQueryJs = resizeQueryJs,
             openLinkQueryJs = openLinkQueryJs,
+            ackQueryJs = ackQueryJs,
             loadingText = loadingText,
         )
     }
 
+    /** Fast-path write: no ack callback. */
     fun writeToTerminal(data: ByteArray) {
         val base64 = Base64.getEncoder().encodeToString(data)
         if (isPageLoaded) {
             executeJs("window.writeTerminalData('$base64')")
         } else {
             synchronized(pendingWrites) {
-                pendingWrites.add(base64)
+                pendingWrites.add(PendingWrite(base64, needsAck = false))
+            }
+        }
+    }
+
+    /** Ack-path write: xterm.js will signal back when this chunk is processed. */
+    fun writeToTerminalAck(data: ByteArray) {
+        val base64 = Base64.getEncoder().encodeToString(data)
+        if (isPageLoaded) {
+            executeJs("window.writeTerminalDataAck('$base64')")
+        } else {
+            synchronized(pendingWrites) {
+                pendingWrites.add(PendingWrite(base64, needsAck = true))
             }
         }
     }
@@ -226,13 +255,17 @@ class CefTerminalPanel(
     }
 
     private fun flushPendingWrites() {
-        val writes: List<String>
+        val writes: List<PendingWrite>
         synchronized(pendingWrites) {
             writes = pendingWrites.toList()
             pendingWrites.clear()
         }
-        for (base64 in writes) {
-            executeJs("window.writeTerminalData('$base64')")
+        for (pw in writes) {
+            if (pw.needsAck) {
+                executeJs("window.writeTerminalDataAck('${pw.base64}')")
+            } else {
+                executeJs("window.writeTerminalData('${pw.base64}')")
+            }
         }
     }
 
@@ -245,6 +278,7 @@ class CefTerminalPanel(
         Disposer.dispose(inputQuery)
         Disposer.dispose(resizeQuery)
         Disposer.dispose(openLinkQuery)
+        Disposer.dispose(ackQuery)
         Disposer.dispose(browser)
     }
 
