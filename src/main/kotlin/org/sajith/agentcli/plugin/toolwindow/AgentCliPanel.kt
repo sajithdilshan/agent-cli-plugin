@@ -129,6 +129,19 @@ class AgentCliPanel(
         env["TERM"] = "xterm-256color"
         env["COLORTERM"] = "truecolor"
 
+        // Ensure the PTY locale is UTF-8 so programs interpret I/O correctly.
+        // If the inherited LANG/LC_CTYPE is missing or set to "C"/"POSIX",
+        // fall back to en_US.UTF-8 to avoid ASCII-only mode.
+        val lang = env["LANG"].orEmpty()
+        val lcAll = env["LC_ALL"].orEmpty()
+        val lcCtype = env["LC_CTYPE"].orEmpty()
+        val hasUtf8Locale = listOf(lang, lcAll, lcCtype).any {
+            it.contains("UTF-8", ignoreCase = true) || it.contains("utf8", ignoreCase = true)
+        }
+        if (!hasUtf8Locale) {
+            env["LANG"] = "en_US.UTF-8"
+        }
+
         ptyBridge =
             PtyBridge(
                 command = shellCommand,

@@ -51,7 +51,7 @@ class CefTerminalPanel(
 
         inputQuery.addHandler { base64Data ->
             try {
-                val decoded = String(Base64.getDecoder().decode(base64Data))
+                val decoded = String(Base64.getDecoder().decode(base64Data), Charsets.UTF_8)
                 onInput(decoded)
             } catch (e: Exception) {
                 LOG.warn("[AgentCLI] CefTerminalPanel: failed to decode input from JS", e)

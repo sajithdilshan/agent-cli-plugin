@@ -475,10 +475,12 @@ internal fun buildCefTerminalPageHtml(
             }
         });
 
-        // Binary input (for special keys)
+        // Binary input (for special keys).
+        // onBinary payloads are binary strings where each codepoint maps
+        // directly to a byte value — do NOT use TextEncoder (UTF-8) here.
         term.onBinary(function(data) {
             try {
-                var base64 = toBase64(data);
+                var base64 = btoa(data);
                 $inputQueryJs
             } catch(e) {
                 console.error('onBinary error:', e);
