@@ -12,7 +12,6 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 class TerminalFlowControllerTest {
-
     // ── Helpers ──────────────────────────────────────────────────────
 
     /** Collects all calls made by the flow controller for assertion. */
@@ -23,7 +22,10 @@ class TerminalFlowControllerTest {
         val pauseCount = AtomicInteger(0)
         val resumeCount = AtomicInteger(0)
 
-        fun onWrite(data: ByteArray, needsAck: Boolean) {
+        fun onWrite(
+            data: ByteArray,
+            needsAck: Boolean,
+        ) {
             writes.add(WriteRecord(data.size, needsAck))
         }
 
@@ -48,14 +50,15 @@ class TerminalFlowControllerTest {
         callbackByteLimit: Int = 100,
         recorder: Recorder = Recorder(),
     ): Pair<TerminalFlowController, Recorder> {
-        val fc = TerminalFlowController(
-            highWatermark = highWatermark,
-            lowWatermark = lowWatermark,
-            callbackByteLimit = callbackByteLimit,
-            onWrite = recorder::onWrite,
-            onPause = recorder::onPause,
-            onResume = recorder::onResume,
-        )
+        val fc =
+            TerminalFlowController(
+                highWatermark = highWatermark,
+                lowWatermark = lowWatermark,
+                callbackByteLimit = callbackByteLimit,
+                onWrite = recorder::onWrite,
+                onPause = recorder::onPause,
+                onResume = recorder::onResume,
+            )
         return fc to recorder
     }
 
@@ -332,11 +335,11 @@ class TerminalFlowControllerTest {
     fun `interleaved small and large writes produce correct mix`() {
         val (fc, rec) = controller(callbackByteLimit = 100)
 
-        fc.write(chunk(30))  // fast (30)
-        fc.write(chunk(30))  // fast (60)
-        fc.write(chunk(30))  // fast (90)
-        fc.write(chunk(30))  // ack (120 >= 100)
-        fc.write(chunk(10))  // fast (10)
+        fc.write(chunk(30)) // fast (30)
+        fc.write(chunk(30)) // fast (60)
+        fc.write(chunk(30)) // fast (90)
+        fc.write(chunk(30)) // ack (120 >= 100)
+        fc.write(chunk(10)) // fast (10)
         fc.write(chunk(200)) // ack (210 >= 100)
 
         assertEquals(4, rec.fastWrites)
@@ -373,12 +376,13 @@ class TerminalFlowControllerTest {
     @Test
     fun `data content is preserved through write`() {
         val captured = mutableListOf<ByteArray>()
-        val fc = TerminalFlowController(
-            callbackByteLimit = 1000,
-            onWrite = { data, _ -> captured.add(data) },
-            onPause = {},
-            onResume = {},
-        )
+        val fc =
+            TerminalFlowController(
+                callbackByteLimit = 1000,
+                onWrite = { data, _ -> captured.add(data) },
+                onPause = {},
+                onResume = {},
+            )
 
         val original = byteArrayOf(0x00, 0x7F, 0x48, 0x65, 0x6C, 0x6C, 0x6F)
         fc.write(original)
@@ -427,11 +431,12 @@ class TerminalFlowControllerTest {
 
     @Test
     fun `realistic scenario with default-like watermarks`() {
-        val (fc, rec) = controller(
-            highWatermark = 5,
-            lowWatermark = 2,
-            callbackByteLimit = 100_000,
-        )
+        val (fc, rec) =
+            controller(
+                highWatermark = 5,
+                lowWatermark = 2,
+                callbackByteLimit = 100_000,
+            )
 
         // Simulate a burst: 800KB in 8KB chunks = 100 writes
         // Every 100KB (about 13 writes) triggers an ack-flagged write
@@ -458,14 +463,15 @@ class TerminalFlowControllerTest {
     @Test
     fun `concurrent writes do not corrupt state`() {
         val rec = Recorder()
-        val fc = TerminalFlowController(
-            highWatermark = 100,
-            lowWatermark = 50,
-            callbackByteLimit = 100,
-            onWrite = rec::onWrite,
-            onPause = rec::onPause,
-            onResume = rec::onResume,
-        )
+        val fc =
+            TerminalFlowController(
+                highWatermark = 100,
+                lowWatermark = 50,
+                callbackByteLimit = 100,
+                onWrite = rec::onWrite,
+                onPause = rec::onPause,
+                onResume = rec::onResume,
+            )
 
         val writerCount = 8
         val writesPerThread = 1000
@@ -492,14 +498,15 @@ class TerminalFlowControllerTest {
     @Test
     fun `concurrent writes and acks do not corrupt state`() {
         val rec = Recorder()
-        val fc = TerminalFlowController(
-            highWatermark = 10,
-            lowWatermark = 3,
-            callbackByteLimit = 100,
-            onWrite = rec::onWrite,
-            onPause = rec::onPause,
-            onResume = rec::onResume,
-        )
+        val fc =
+            TerminalFlowController(
+                highWatermark = 10,
+                lowWatermark = 3,
+                callbackByteLimit = 100,
+                onWrite = rec::onWrite,
+                onPause = rec::onPause,
+                onResume = rec::onResume,
+            )
 
         val writerCount = 4
         val ackerCount = 4
@@ -539,14 +546,15 @@ class TerminalFlowControllerTest {
     @Test
     fun `pause and resume counts are consistent under concurrency`() {
         val rec = Recorder()
-        val fc = TerminalFlowController(
-            highWatermark = 5,
-            lowWatermark = 2,
-            callbackByteLimit = 10,
-            onWrite = rec::onWrite,
-            onPause = rec::onPause,
-            onResume = rec::onResume,
-        )
+        val fc =
+            TerminalFlowController(
+                highWatermark = 5,
+                lowWatermark = 2,
+                callbackByteLimit = 10,
+                onWrite = rec::onWrite,
+                onPause = rec::onPause,
+                onResume = rec::onResume,
+            )
 
         val barrier = CyclicBarrier(2)
         val latch = CountDownLatch(2)

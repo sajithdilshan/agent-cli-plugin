@@ -1,5 +1,6 @@
 package org.sajith.agentcli.plugin.terminal
 
+import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.util.Disposer
@@ -12,7 +13,6 @@ import org.cef.browser.CefFrame
 import org.cef.handler.CefDisplayHandlerAdapter
 import org.cef.handler.CefLoadHandler
 import org.cef.handler.CefLoadHandlerAdapter
-import com.intellij.ide.BrowserUtil
 import org.sajith.agentcli.plugin.settings.AgentCliSettings
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent

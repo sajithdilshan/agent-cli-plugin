@@ -38,7 +38,7 @@ class TerminalFlowController(
 
     private val _bytesWritten = AtomicLong(0)
     private val _pendingCallbacks = AtomicInteger(0)
-    private val _paused = AtomicBoolean(false)
+    private val pausedFlag = AtomicBoolean(false)
 
     /** Accumulated bytes since the last ack-flagged write. */
     val bytesWritten: Long get() = _bytesWritten.get()
@@ -47,7 +47,7 @@ class TerminalFlowController(
     val pendingCallbacks: Int get() = _pendingCallbacks.get()
 
     /** Whether the controller has signalled a pause. */
-    val isPaused: Boolean get() = _paused.get()
+    val isPaused: Boolean get() = pausedFlag.get()
 
     /**
      * Called for every chunk read from the PTY.
@@ -61,7 +61,7 @@ class TerminalFlowController(
             val pending = _pendingCallbacks.incrementAndGet()
             onWrite(data, true)
 
-            if (pending > highWatermark && _paused.compareAndSet(false, true)) {
+            if (pending > highWatermark && pausedFlag.compareAndSet(false, true)) {
                 onPause()
             }
         } else {
@@ -75,7 +75,7 @@ class TerminalFlowController(
     fun ack() {
         val pending = _pendingCallbacks.updateAndGet { current -> maxOf(current - 1, 0) }
 
-        if (pending < lowWatermark && _paused.compareAndSet(true, false)) {
+        if (pending < lowWatermark && pausedFlag.compareAndSet(true, false)) {
             onResume()
         }
     }

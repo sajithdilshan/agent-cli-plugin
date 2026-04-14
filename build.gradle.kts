@@ -51,6 +51,10 @@ tasks.test {
     useJUnitPlatform()
 }
 
+tasks.named("buildPlugin") {
+    dependsOn(tasks.test)
+}
+
 kotlin {
     jvmToolchain(17)
 }

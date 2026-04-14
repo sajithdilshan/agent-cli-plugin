@@ -389,13 +389,14 @@ class SessionSidebarPanel(
         // Animate dots: "Loading sessions", "Loading sessions.", "Loading sessions..", "Loading sessions..."
         val dotStates = arrayOf("", ".", "..", "...")
         var dotIndex = 0
-        loadingTimer = Timer(400) {
-            dotIndex = (dotIndex + 1) % dotStates.size
-            dotsLabel.text = "Loading sessions${dotStates[dotIndex]}"
-        }.apply {
-            isRepeats = true
-            start()
-        }
+        loadingTimer =
+            Timer(400) {
+                dotIndex = (dotIndex + 1) % dotStates.size
+                dotsLabel.text = "Loading sessions${dotStates[dotIndex]}"
+            }.apply {
+                isRepeats = true
+                start()
+            }
 
         return JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)

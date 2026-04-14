@@ -18,6 +18,7 @@ import org.sajith.agentcli.plugin.terminal.TerminalFlowController
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import javax.swing.JPanel
+import javax.swing.SwingUtilities
 
 class AgentCliPanel(
     private val project: Project,
@@ -140,7 +141,7 @@ class AgentCliPanel(
                 onResume = { ptyBridge.resume() },
             )
 
-        val shellCommand = shellInvocation()
+        val shellCommand = shellCommandFor(command)
 
         val env = HashMap(System.getenv())
         env["TERM"] = "xterm-256color"
@@ -152,9 +153,10 @@ class AgentCliPanel(
         val lang = env["LANG"].orEmpty()
         val lcAll = env["LC_ALL"].orEmpty()
         val lcCtype = env["LC_CTYPE"].orEmpty()
-        val hasUtf8Locale = listOf(lang, lcAll, lcCtype).any {
-            it.contains("UTF-8", ignoreCase = true) || it.contains("utf8", ignoreCase = true)
-        }
+        val hasUtf8Locale =
+            listOf(lang, lcAll, lcCtype).any {
+                it.contains("UTF-8", ignoreCase = true) || it.contains("utf8", ignoreCase = true)
+            }
         if (!hasUtf8Locale) {
             env["LANG"] = "en_US.UTF-8"
         }
@@ -165,7 +167,10 @@ class AgentCliPanel(
                 workingDirectory = workingDir,
                 environment = env,
                 onOutput = { data -> flowController.write(data) },
-                onExit = { },
+                onExit = { exitCode ->
+                    LOG.info("[AgentCLI] Agent process exited with code $exitCode for session ${session.id}")
+                    SwingUtilities.invokeLater { closeSession(session) }
+                },
             )
         Disposer.register(parentDisposable, ptyBridge)
 
@@ -183,19 +188,21 @@ class AgentCliPanel(
 
         ApplicationManager.getApplication().executeOnPooledThread {
             try {
-                ptyBridge.startWithCommand("$command\n")
+                ptyBridge.start()
             } catch (e: Exception) {
                 LOG.error("[AgentCLI] Failed to start PTY for session ${session.id}", e)
             }
         }
     }
 
-    private fun shellInvocation(): Array<String> {
-        val shell = System.getenv("SHELL") ?: System.getenv("COMSPEC") ?: "/bin/sh"
-        return if (System.getProperty("os.name").lowercase().contains("win")) {
-            arrayOf(shell)
+    private fun shellCommandFor(agentCommand: String): Array<String> {
+        val isWindows = System.getProperty("os.name").lowercase().contains("win")
+        return if (isWindows) {
+            val shell = System.getenv("COMSPEC") ?: "cmd.exe"
+            arrayOf(shell, "/c", agentCommand)
         } else {
-            arrayOf(shell, "-l")
+            val shell = System.getenv("SHELL") ?: "/bin/sh"
+            arrayOf(shell, "-l", "-i", "-c", "exec $agentCommand")
         }
     }
 

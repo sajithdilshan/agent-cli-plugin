@@ -27,7 +27,7 @@ class PtyBridge(
     private val resumeCondition = pauseLock.newCondition()
     private val isPaused = AtomicBoolean(false)
 
-    fun startWithCommand(data: String) {
+    fun start() {
         val builder =
             PtyProcessBuilder(command)
                 .setDirectory(workingDirectory)
@@ -73,8 +73,6 @@ class PtyBridge(
                 isDaemon = true
                 start()
             }
-
-        write(data)
     }
 
     fun write(data: String) {
