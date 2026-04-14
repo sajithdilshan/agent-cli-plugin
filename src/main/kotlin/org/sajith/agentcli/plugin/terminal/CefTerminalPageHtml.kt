@@ -283,11 +283,10 @@ internal fun buildCefTerminalPageHtml(
 
         // ── Window bridge functions called from Java ──────────────────
 
-        // Dismiss loading overlay: wait 2s, then check every 500ms
-        // if output has gone quiet. Optimized for Claude Code which
-        // outputs its banner then goes idle when ready for input.
+        // Dismiss loading overlay on the first terminal write.
+        // With `exec`, the PTY process IS the agent CLI so the
+        // first output byte means the agent has started.
         var overlayDismissed = false;
-        var lastOutputTime = 0;
 
         function dismissOverlay() {
             if (overlayDismissed) return;
@@ -298,16 +297,6 @@ internal fun buildCefTerminalPageHtml(
                 setTimeout(function() { overlay.remove(); }, 400);
             }
         }
-
-        setTimeout(function() {
-            var check = setInterval(function() {
-                if (overlayDismissed) { clearInterval(check); return; }
-                if (!lastOutputTime || (Date.now() - lastOutputTime >= 500)) {
-                    clearInterval(check);
-                    dismissOverlay();
-                }
-            }, 500);
-        }, 2000);
 
         // Decode Base64 PTY output into a Uint8Array.
         function decodeBase64ToBytes(base64Data) {
@@ -320,7 +309,7 @@ internal fun buildCefTerminalPageHtml(
         }
 
         function onWriteComplete() {
-            lastOutputTime = Date.now();
+            dismissOverlay();
             if (Date.now() < postResizeScrollDeadline) {
                 if (postResizeSettleTimer) { clearTimeout(postResizeSettleTimer); }
                 postResizeSettleTimer = setTimeout(function() {
