@@ -12,9 +12,11 @@ import org.cef.browser.CefFrame
 import org.cef.handler.CefDisplayHandlerAdapter
 import org.cef.handler.CefLoadHandler
 import org.cef.handler.CefLoadHandlerAdapter
+import com.intellij.ide.BrowserUtil
 import org.sajith.agentcli.plugin.settings.AgentCliSettings
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
+import java.net.URI
 import java.util.Base64
 import javax.swing.JComponent
 import javax.swing.Timer
@@ -28,6 +30,7 @@ class CefTerminalPanel(
     private val browser: JBCefBrowser = JBCefBrowser()
     private val inputQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
     private val resizeQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
+    private val openLinkQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
 
     @Volatile
     private var isPageLoaded = false
@@ -67,6 +70,21 @@ class CefTerminalPanel(
                 }
             } catch (e: Exception) {
                 LOG.warn("[AgentCLI] CefTerminalPanel: failed to parse resize from JS: $sizeJson", e)
+            }
+            JBCefJSQuery.Response("")
+        }
+
+        openLinkQuery.addHandler { url ->
+            try {
+                val uri = URI(url)
+                val scheme = uri.scheme?.lowercase()
+                if (scheme == "http" || scheme == "https") {
+                    BrowserUtil.browse(uri)
+                } else {
+                    LOG.warn("[AgentCLI] CefTerminalPanel: blocked non-http(s) link: $url")
+                }
+            } catch (e: Exception) {
+                LOG.warn("[AgentCLI] CefTerminalPanel: invalid link URL: $url", e)
             }
             JBCefJSQuery.Response("")
         }
@@ -154,6 +172,7 @@ class CefTerminalPanel(
 
         val inputQueryJs = inputQuery.inject("base64")
         val resizeQueryJs = resizeQuery.inject("size")
+        val openLinkQueryJs = openLinkQuery.inject("uri")
 
         return buildCefTerminalPageHtml(
             fontSize = fontSize,
@@ -165,6 +184,7 @@ class CefTerminalPanel(
             unicode11AddonJs = assets.unicode11AddonJs,
             inputQueryJs = inputQueryJs,
             resizeQueryJs = resizeQueryJs,
+            openLinkQueryJs = openLinkQueryJs,
             loadingText = loadingText,
         )
     }
@@ -182,8 +202,8 @@ class CefTerminalPanel(
 
     fun applyTheme() {
         val themeJson = TerminalThemeProvider.getThemeJson()
-        val escaped = themeJson.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
-        executeJs("window.setTerminalTheme('$escaped')")
+        val base64 = Base64.getEncoder().encodeToString(themeJson.toByteArray(Charsets.UTF_8))
+        executeJs("window.setTerminalTheme('$base64')")
     }
 
     fun setResizeEnabled(enabled: Boolean) {
@@ -224,6 +244,7 @@ class CefTerminalPanel(
         resizeDebounceTimer.stop()
         Disposer.dispose(inputQuery)
         Disposer.dispose(resizeQuery)
+        Disposer.dispose(openLinkQuery)
         Disposer.dispose(browser)
     }
 

@@ -14,6 +14,7 @@ internal fun buildCefTerminalPageHtml(
     unicode11AddonJs: String,
     inputQueryJs: String,
     resizeQueryJs: String,
+    openLinkQueryJs: String,
     loadingText: String = "Starting Session...",
 ): String =
     """
@@ -227,7 +228,18 @@ internal fun buildCefTerminalPageHtml(
         });
 
         var fitAddon = new FitAddon.FitAddon();
-        var webLinksAddon = new WebLinksAddon.WebLinksAddon();
+        var webLinksAddon = new WebLinksAddon.WebLinksAddon(function(event, uri) {
+            // Security: only allow http/https links and open in the system
+            // browser via the JBCefJSQuery bridge, never inside this context.
+            try {
+                var parsed = new URL(uri);
+                if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+                    $openLinkQueryJs
+                }
+            } catch(e) {
+                // Malformed URI — ignore
+            }
+        });
         term.loadAddon(fitAddon);
         term.loadAddon(webLinksAddon);
         if (Unicode11Addon) {
@@ -319,9 +331,12 @@ internal fun buildCefTerminalPageHtml(
             }
         };
 
-        // Set theme
-        window.setTerminalTheme = function(themeJson) {
+        // Set theme (receives Base64-encoded JSON)
+        window.setTerminalTheme = function(base64ThemeJson) {
             try {
+                var themeJson = decodeURIComponent(atob(base64ThemeJson).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
                 var theme = JSON.parse(themeJson);
                 term.options.theme = theme;
                 document.body.style.background = theme.background || '#1e1e1e';
