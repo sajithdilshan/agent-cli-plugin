@@ -5,28 +5,36 @@
     <vendor>Sajith Edirisinghe</vendor>
 
     <description><![CDATA[
+    <p>Run AI coding agents directly inside your JetBrains IDE with a fully embedded terminal and session management.</p>
     <ul>
-        <li>Agent CLI tool window with an embedded terminal and a compact session sidebar.</li>
-        <li>Support for Claude Code, Cursor agent, OpenAI Codex and Gemini CLI — start a session for the agent you use from the + menu.</li>
-        <li>Multiple sessions — create, switch, and close sessions; session history for the current project with resume by session ID where local agent data is available.</li>
-        <li>Theme-aware terminal — colors follow the IDE look-and-feel where applicable.</li>
-        <li>Settings (Settings → Tools → Agent CLI) — configure each agent's launch command and terminal font size.</li>
+        <li>Support for Claude Code, Cursor Agent, OpenAI Codex and Gemini CLI — start a session for any enabled agent from the + menu.</li>
+        <li>Multiple simultaneous sessions — create, switch, close, and delete sessions. Sessions auto-close when the agent process exits.</li>
+        <li>Session history — browse past sessions grouped by date (Today, Yesterday, This Week, Older), preview first messages, and resume previous sessions by ID where local agent data is available.</li>
+        <li>High-performance embedded terminal — xterm.js-based with watermark flow control, clickable URL detection, UTF-8 encoding, and a 10,000-line scrollback buffer.</li>
+        <li>Theme-aware UI — terminal colors and scrollbars follow the IDE look-and-feel and update dynamically when the theme changes.</li>
+        <li>Compact session sidebar — collapsible panel showing active sessions and browsable history with right-click context menus.</li>
+        <li>Per-agent configuration (Settings → Tools → Agent CLI) — enable or disable each agent, customize launch commands, and adjust terminal font size.</li>
     </ul>
     <p><em>Note: A JetBrains Runtime with JCEF is required for the embedded terminal. Install and sign in to each agent CLI you use separately.</em></p>
     ]]></description>
 
     <change-notes><![CDATA[
-    <h3>0.5.1</h3>
+    <h3>0.6.1</h3>
     <ul>
-        <li>Fixed the timer logic in the history panel.</li>
-        <li>Shipped follow-up metadata and documentation updates as part of the patch release.</li>
-        <li>Added Codex as a supported agent type across the plugin.</li>
-        <li>Added a dedicated Codex history reader and wired Codex sessions into the sidebar, panel, and deletion flow.</li>
-        <li>Expanded settings and internal architecture to support the new agent cleanly.</li>
-        <li>Optimized history file parsing across supported agents to improve responsiveness.</li>
-        <li>Added a loading screen for terminal initialization and history-related UI states.</li>
-        <li>Fixed rendering and parsing issues in the terminal and history UI.</li>
+        <li>Added session name to the tool window title for easier identification of the active agent session.</li>
+        <li>Adjusted watermark configuration and increased terminal rendering delay for improved stability.</li>
+        <li>Refactored terminal page HTML for cleaner structure.</li>
     </ul>
+    <h3>0.6.0</h3>
+    <ul>
+        <li>Added watermark-based terminal flow control to prevent unbounded buffer growth during fast output bursts.</li>
+        <li>Sessions now auto-close when the agent process exits.</li>
+        <li>Improved resource cleanup with proper disposable registration for the sidebar and PTY bridges.</li>
+        <li>Fixed character encoding issues by ensuring proper UTF-8 locale handling.</li>
+        <li>Fixed URL opening from the terminal so links open correctly in the browser.</li>
+        <li>Refactored loading screen handling.</li>
+    </ul>
+    <p>Full changelogs can be found at <a href="https://github.com/sajithdilshan/agent-cli-plugin/tree/main/changelog">https://github.com/sajithdilshan/agent-cli-plugin/tree/main/changelog</a></p>
     ]]></change-notes>
 
     <depends>com.intellij.modules.platform</depends>
