@@ -24,6 +24,7 @@ class AgentCliSettings : PersistentStateComponent<AgentCliSettings.State> {
         var codexEnabled: Boolean = true,
         var codexCommand: String = "codex",
         var terminalFontSize: Int = 13,
+        var flowControlEnabled: Boolean = false,
     )
 
     private var state = State()
@@ -97,6 +98,12 @@ class AgentCliSettings : PersistentStateComponent<AgentCliSettings.State> {
         get() = state.terminalFontSize
         set(value) {
             state.terminalFontSize = value
+        }
+
+    var flowControlEnabled: Boolean
+        get() = state.flowControlEnabled
+        set(value) {
+            state.flowControlEnabled = value
         }
 
     fun interface SettingsChangeListener {

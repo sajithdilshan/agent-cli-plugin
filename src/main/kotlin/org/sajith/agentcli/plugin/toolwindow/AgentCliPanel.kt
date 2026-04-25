@@ -130,20 +130,21 @@ class AgentCliPanel(
                 loadingText = if (isResume) "Resuming Session..." else "Starting Session...",
             )
 
+        val flowControlEnabled = AgentCliSettings.getInstance().flowControlEnabled
         flowController =
             TerminalFlowController(
                 highWatermark = 8,
                 lowWatermark = 3,
                 callbackByteLimit = 200_000,
                 onWrite = { data, needsAck ->
-                    if (needsAck) {
+                    if (needsAck && flowControlEnabled) {
                         cefPanel.writeToTerminalAck(data)
                     } else {
                         cefPanel.writeToTerminal(data)
                     }
                 },
-                onPause = { ptyBridge.pause() },
-                onResume = { ptyBridge.resume() },
+                onPause = { if (flowControlEnabled) ptyBridge.pause() },
+                onResume = { if (flowControlEnabled) ptyBridge.resume() },
             )
 
         val shellCommand = shellCommandFor(command)

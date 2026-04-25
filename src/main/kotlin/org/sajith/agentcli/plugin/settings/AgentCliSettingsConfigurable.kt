@@ -89,6 +89,11 @@ class AgentCliSettingsConfigurable : BoundSearchableConfigurable(
                         .bindIntText(settings::terminalFontSize)
                         .comment("Terminal font size (8-32)")
                 }
+                row {
+                    checkBox("Enable flow control")
+                        .bindSelected(settings::flowControlEnabled)
+                        .comment("Throttle fast PTY output to prevent terminal buffer overflows (restart session to apply)")
+                }
             }
         }
 }
