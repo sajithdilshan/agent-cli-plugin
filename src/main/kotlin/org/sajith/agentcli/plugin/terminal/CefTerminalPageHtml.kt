@@ -42,27 +42,6 @@ internal fun buildCefTerminalPageHtml(
     .xterm {
         padding: 4px;
     }
-    /* Dark-themed scrollbar */
-    .xterm-viewport::-webkit-scrollbar {
-        width: 10px;
-    }
-    .xterm-viewport::-webkit-scrollbar-track {
-        background: transparent;
-    }
-    .xterm-viewport::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 5px;
-    }
-    .xterm-viewport::-webkit-scrollbar-thumb:hover {
-        background: rgba(255, 255, 255, 0.35);
-    }
-    /* Light theme override — set via JS */
-    body.light-theme .xterm-viewport::-webkit-scrollbar-thumb {
-        background: rgba(0, 0, 0, 0.2);
-    }
-    body.light-theme .xterm-viewport::-webkit-scrollbar-thumb:hover {
-        background: rgba(0, 0, 0, 0.35);
-    }
     #loading-overlay {
         position: absolute;
         top: 0; left: 0; right: 0; bottom: 0;
@@ -177,6 +156,42 @@ internal fun buildCefTerminalPageHtml(
     </style>
     <style>
     $xtermCss
+    </style>
+    <style>
+    /* Override xterm 6.0 VS Code-style scroll shadows */
+    .xterm .xterm-scrollable-element > .shadow,
+    .xterm .xterm-scrollable-element > .shadow.top,
+    .xterm .xterm-scrollable-element > .shadow.left,
+    .xterm .xterm-scrollable-element > .shadow.top-left-corner,
+    .xterm .xterm-scrollable-element > .shadow.top.left {
+        display: none !important;
+        box-shadow: none !important;
+    }
+    /* Prevent the hardcoded #000 viewport background from showing through padding */
+    .xterm .xterm-viewport {
+        background-color: transparent !important;
+    }
+    /* Dark-themed scrollbar */
+    .xterm-viewport::-webkit-scrollbar {
+        width: 10px;
+    }
+    .xterm-viewport::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .xterm-viewport::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 5px;
+    }
+    .xterm-viewport::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.35);
+    }
+    /* Light theme override — set via JS */
+    body.light-theme .xterm-viewport::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.2);
+    }
+    body.light-theme .xterm-viewport::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.35);
+    }
     </style>
     </head>
     <body>
