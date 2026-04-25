@@ -130,7 +130,7 @@ class PtyBridge(
                 // Caller was interrupted while waiting; proceed with cleanup.
             }
             try {
-                process?.destroy()
+                process?.destroyForcibly()
             } catch (e: Exception) {
                 LOG.warn("[AgentCLI] PtyBridge: error destroying process", e)
             }
