@@ -28,6 +28,7 @@ No Warranty: This software is provided "as is," without warranty of any kind. Us
 * **Multi-agent support** — launch sessions for Claude Code, Cursor, or Gemini CLI from the same tool window (pick the agent from the **+** menu).
 * **Multiple sessions** — create, switch, and close sessions from the sidebar (`+` for new; middle-click or the close affordance to close).
 * **Session history** — browse past sessions for the current project and resume by session ID when not already open. History is read from each agent's local data: Claude Code (`~/.claude/projects/…`), Cursor (`~/.cursor/projects/…/agent-transcripts/…`), and Gemini CLI (`~/.gemini`, including `projects.json` and chat JSON under `tmp/<project>/chats`).
+* **Attention notifications** — when an agent needs your input (permission prompt, idle confirmation, Codex permission request), the session row shows a red dot instead of the green play icon and an IDE balloon pops up. Opt-in: install the hooks from **Settings → Tools → Agent CLI → Attention Notifications** and they merge idempotently into `~/.claude/settings.json`, `~/.gemini/settings.json`, and `~/.codex/hooks.json` (with `.bak` backups); Uninstall cleanly removes them. Agents launched outside the IDE are a no-op — the hook skips the HTTP call entirely.
 * **Theme sync** — terminal colors follow the IDE look-and-feel / editor colors where applicable.
 * **Settings** — configurable CLI commands and terminal font size (**Settings → Tools → Agent CLI**).
 

@@ -8,7 +8,9 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.ui.OnePixelSplitter
+import org.jetbrains.ide.BuiltInServerManager
 import org.sajith.agentcli.plugin.AgentType
+import org.sajith.agentcli.plugin.notify.SessionAttentionService
 import org.sajith.agentcli.plugin.session.AgentCliSession
 import org.sajith.agentcli.plugin.session.SessionHistoryDeleter
 import org.sajith.agentcli.plugin.session.SessionManager
@@ -27,6 +29,7 @@ class AgentCliPanel(
     private val parentDisposable: Disposable,
 ) : JPanel(BorderLayout()) {
     private val sessionManager = SessionManager.getInstance(project)
+    private val attentionService = SessionAttentionService.getInstance(project)
     private val terminalCardLayout = CardLayout()
     private val terminalPanel = JPanel(terminalCardLayout)
     private val terminalPanels = mutableMapOf<String, CefTerminalPanel>()
@@ -124,7 +127,11 @@ class AgentCliPanel(
         val cefPanel =
             CefTerminalPanel(
                 parentDisposable = parentDisposable,
-                onInput = { data -> ptyBridge.write(data) },
+                onInput = { data ->
+                    ptyBridge.write(data)
+                    // Any user input implicitly acknowledges an attention prompt.
+                    attentionService.clearByPluginSessionId(session.id)
+                },
                 onResize = { cols, rows -> ptyBridge.resize(cols, rows) },
                 onAck = { flowController.ack() },
                 loadingText = if (isResume) "Resuming Session..." else "Starting Session...",
@@ -152,6 +159,12 @@ class AgentCliPanel(
         val env = HashMap(System.getenv())
         env["TERM"] = "xterm-256color"
         env["COLORTERM"] = "truecolor"
+
+        // Session identity + notify endpoint for per-agent hook scripts.
+        env["AGENT_CLI_PLUGIN_SESSION_ID"] = session.id
+        env["AGENT_CLI_PLUGIN_AGENT"] = session.agentType.name.lowercase()
+        val port = BuiltInServerManager.getInstance().port
+        env["AGENT_CLI_PLUGIN_NOTIFY_URL"] = "http://127.0.0.1:$port/agent-cli-plugin/notify"
 
         // Ensure the PTY locale is UTF-8 so programs interpret I/O correctly.
         // If the inherited LANG/LC_CTYPE is missing or set to "C"/"POSIX",
@@ -223,6 +236,7 @@ class AgentCliPanel(
             terminalCardLayout.show(terminalPanel, session.id)
             sidebar.selectSession(session)
             terminalPanels[session.id]?.focus()
+            attentionService.clearByPluginSessionId(session.id)
             updateToolWindowTitle()
         } else {
             LOG.warn("[AgentCLI] switchToSession: no terminal panel found for session ${session.id}")

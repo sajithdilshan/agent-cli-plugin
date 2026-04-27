@@ -16,6 +16,7 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.ui.JBUI
 import org.sajith.agentcli.plugin.AgentType
 import org.sajith.agentcli.plugin.session.AgentCliSession
@@ -28,10 +29,14 @@ import org.sajith.agentcli.plugin.session.SessionManager
 import org.sajith.agentcli.plugin.settings.AgentCliSettings
 import java.awt.BorderLayout
 import java.awt.CardLayout
+import java.awt.Color
 import java.awt.Component
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Font
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.RenderingHints
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.time.LocalDate
@@ -39,6 +44,7 @@ import java.time.temporal.WeekFields
 import java.util.Locale
 import javax.swing.BoxLayout
 import javax.swing.DefaultListModel
+import javax.swing.Icon
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JList
@@ -108,6 +114,15 @@ class SessionSidebarPanel(
                 loadHistory()
             }
         }
+
+        // Repaint the active session list when attention state changes.
+        project.messageBus.connect(this)
+            .subscribe(
+                SessionManager.SESSION_ATTENTION_TOPIC,
+                SessionManager.SessionAttentionListener {
+                    SwingUtilities.invokeLater { activeSessionList.repaint() }
+                },
+            )
         LOG.info("[AgentCLI] SessionSidebarPanel init END")
     }
 
@@ -567,9 +582,16 @@ class SessionSidebarPanel(
                 border = JBUI.Borders.empty(4, 8, 4, 4)
                 minimumSize = Dimension(0, 0)
 
+                val icon =
+                    if (value.needsAttention) {
+                        AttentionDotIcon
+                    } else {
+                        AllIcons.Actions.Execute
+                    }
                 val iconLabel =
-                    JLabel(AllIcons.Actions.Execute).apply {
+                    JLabel(icon).apply {
                         border = JBUI.Borders.emptyRight(4)
+                        toolTipText = value.attentionMessage
                     }
 
                 val nameLabel =
@@ -670,5 +692,32 @@ class SessionSidebarPanel(
                 }
             }
         }
+    }
+
+    private object AttentionDotIcon : Icon {
+        private val fillColor = JBColor(Color(0xE53935), Color(0xEF5350))
+
+        override fun paintIcon(
+            c: Component?,
+            g: Graphics,
+            x: Int,
+            y: Int,
+        ) {
+            val g2 = g.create() as Graphics2D
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                val diameter = JBUIScale.scale(10)
+                val offsetX = x + (iconWidth - diameter) / 2
+                val offsetY = y + (iconHeight - diameter) / 2
+                g2.color = fillColor
+                g2.fillOval(offsetX, offsetY, diameter, diameter)
+            } finally {
+                g2.dispose()
+            }
+        }
+
+        override fun getIconWidth(): Int = JBUIScale.scale(16)
+
+        override fun getIconHeight(): Int = JBUIScale.scale(16)
     }
 }

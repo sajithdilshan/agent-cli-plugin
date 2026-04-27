@@ -2,10 +2,11 @@ package org.sajith.agentcli.plugin.session
 
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
+import com.intellij.util.messages.Topic
 import org.sajith.agentcli.plugin.AgentType
 
 @Service(Service.Level.PROJECT)
-class SessionManager {
+class SessionManager(private val project: Project) {
     private val activeSessions = mutableListOf<AgentCliSession>()
     private val openSessionIds = mutableMapOf<AgentType, MutableSet<String>>()
     private var sessionCounter = 0
@@ -35,13 +36,48 @@ class SessionManager {
 
     fun removeSession(session: AgentCliSession) {
         session.isActive = false
+        session.needsAttention = false
+        session.attentionMessage = null
         activeSessions.remove(session)
         session.agentSessionId?.let { openSessionIds[session.agentType]?.remove(it) }
     }
 
+    fun findById(sessionId: String): AgentCliSession? = activeSessions.firstOrNull { it.id == sessionId }
+
+    fun findByAgentSessionId(agentSessionId: String): AgentCliSession? = activeSessions.firstOrNull { it.agentSessionId == agentSessionId }
+
+    fun markAttention(
+        sessionId: String,
+        message: String?,
+    ): AgentCliSession? {
+        val session = findById(sessionId) ?: findByAgentSessionId(sessionId) ?: return null
+        session.needsAttention = true
+        session.attentionMessage = message
+        fireAttentionChanged(session)
+        return session
+    }
+
+    fun clearAttention(sessionId: String): AgentCliSession? {
+        val session = findById(sessionId) ?: findByAgentSessionId(sessionId) ?: return null
+        if (!session.needsAttention && session.attentionMessage == null) return session
+        session.needsAttention = false
+        session.attentionMessage = null
+        fireAttentionChanged(session)
+        return session
+    }
+
+    private fun fireAttentionChanged(session: AgentCliSession) {
+        project.messageBus.syncPublisher(SESSION_ATTENTION_TOPIC).attentionChanged(session)
+    }
+
+    fun interface SessionAttentionListener {
+        fun attentionChanged(session: AgentCliSession)
+    }
+
     companion object {
-        fun getInstance(project: Project): SessionManager {
-            return project.getService(SessionManager::class.java)
-        }
+        val SESSION_ATTENTION_TOPIC: Topic<SessionAttentionListener> =
+            Topic.create("AgentCLI.SessionAttention", SessionAttentionListener::class.java)
+
+        fun getInstance(project: Project): SessionManager = project.getService(SessionManager::class.java)
     }
 }

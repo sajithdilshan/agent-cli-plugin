@@ -56,5 +56,12 @@
 
         <applicationService
                 serviceImplementation="org.sajith.agentcli.plugin.settings.AgentCliSettings"/>
+
+        <httpRequestHandler implementation="org.sajith.agentcli.plugin.notify.AgentCliNotifyHandler"/>
+
+        <notificationGroup id="Agent CLI Attention"
+                           displayType="BALLOON"
+                           isLogByDefault="false"
+                           toolWindowId="Agent CLI"/>
     </extensions>
 </idea-plugin>

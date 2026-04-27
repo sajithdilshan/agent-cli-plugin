@@ -10,6 +10,8 @@ data class AgentCliSession(
     val createdAt: LocalDateTime = LocalDateTime.now(),
     var isActive: Boolean = true,
     val agentSessionId: String? = null,
+    @Transient var needsAttention: Boolean = false,
+    @Transient var attentionMessage: String? = null,
 ) {
     val displayName: String
         get() = name
