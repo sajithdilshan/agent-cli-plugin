@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>org.sajith.agentcli.plugin</id>
     <name>Agent CLI</name>
-    <version>0.6.1</version>
+    <version>0.7.0</version>
     <vendor>Sajith Edirisinghe</vendor>
 
     <description><![CDATA[
@@ -20,20 +20,15 @@
     ]]></description>
 
     <change-notes><![CDATA[
-    <h3>0.6.1</h3>
+    <h3>0.7.0</h3>
     <ul>
-        <li>Added session name to the tool window title for easier identification of the active agent session.</li>
-        <li>Adjusted watermark configuration and increased terminal rendering delay for improved stability.</li>
-        <li>Refactored terminal page HTML for cleaner structure.</li>
-    </ul>
-    <h3>0.6.0</h3>
-    <ul>
-        <li>Added watermark-based terminal flow control to prevent unbounded buffer growth during fast output bursts.</li>
-        <li>Sessions now auto-close when the agent process exits.</li>
-        <li>Improved resource cleanup with proper disposable registration for the sidebar and PTY bridges.</li>
-        <li>Fixed character encoding issues by ensuring proper UTF-8 locale handling.</li>
-        <li>Fixed URL opening from the terminal so links open correctly in the browser.</li>
-        <li>Refactored loading screen handling.</li>
+        <li>Added attention notifications — sessions needing input show a red dot and fire an IDE balloon; opt-in hook installer merges idempotently into Claude / Gemini / Codex configs with .bak backups and clean uninstall.</li>
+        <li>Added Windows support for notification hooks via a bundled PowerShell script.</li>
+        <li>Added an "Enable flow control" setting so users can opt out of PTY watermark throttling.</li>
+        <li>Reworked the hook installer settings UI with a richer preview grouped by agent.</li>
+        <li>Fixed session-close leaks by forcibly destroying the PTY process so agent processes don't linger.</li>
+        <li>Fixed cross-platform session path handling (Windows drive letters, backslashes, trailing slashes) for Codex / Claude / Gemini session lookups.</li>
+        <li>Updated bundled xterm.js and added CSS overrides for xterm 6.0 scroll shadows and viewport background.</li>
     </ul>
     <p>Full changelogs can be found at <a href="https://github.com/sajithdilshan/agent-cli-plugin/tree/main/changelog">https://github.com/sajithdilshan/agent-cli-plugin/tree/main/changelog</a></p>
     ]]></change-notes>
