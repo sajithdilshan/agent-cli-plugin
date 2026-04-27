@@ -13,9 +13,20 @@ internal object SessionPathResolver {
     @Volatile
     private var cachedGeminiProjects: Map<String, String> = emptyMap()
 
-    fun encodeClaudeProjectPath(projectPath: String): String = projectPath.trimEnd('/').replace("/", "-")
+    /**
+     * Normalizes a filesystem path for cross-platform comparison. On Windows,
+     * `project.basePath` from IntelliJ uses `/`, but CLI tools often store paths with `\`.
+     * We flatten to `/`, drop trailing slashes, and lowercase the Windows drive letter.
+     */
+    fun normalizePath(path: String): String {
+        val flat = path.replace('\\', '/').trimEnd('/')
+        // Lowercase drive letter ("C:/..." -> "c:/...") so case-insensitive compares work
+        return if (flat.length >= 2 && flat[1] == ':') flat[0].lowercaseChar() + flat.substring(1) else flat
+    }
 
-    fun encodeCursorProjectPath(projectPath: String): String = projectPath.trimEnd('/').replace("/", "-").removePrefix("-")
+    fun encodeClaudeProjectPath(projectPath: String): String = normalizePath(projectPath).replace("/", "-")
+
+    fun encodeCursorProjectPath(projectPath: String): String = normalizePath(projectPath).replace("/", "-").removePrefix("-")
 
     fun resolveProjectDirectory(
         baseDir: File,
@@ -23,7 +34,9 @@ internal object SessionPathResolver {
     ): File? {
         val direct = baseDir.resolve(encodedPath)
         if (direct.exists() && direct.isDirectory) return direct
-        return baseDir.listFiles { f -> f.isDirectory }?.firstOrNull { it.name == encodedPath }
+        // Fallback: case-insensitive match (Windows filesystems are typically case-insensitive but
+        // the encoded string preserves original case, so match loosely).
+        return baseDir.listFiles { f -> f.isDirectory }?.firstOrNull { it.name.equals(encodedPath, ignoreCase = true) }
     }
 
     fun resolveGeminiProjectName(
@@ -31,7 +44,9 @@ internal object SessionPathResolver {
         projectPath: String,
     ): String? {
         val projects = loadGeminiProjects(geminiDir) ?: return null
-        return projects[projectPath.trimEnd('/')]
+        val needle = normalizePath(projectPath)
+        // Gemini stores paths as the CLI saw them — could be `\`-separated on Windows. Normalize both sides.
+        return projects.entries.firstOrNull { normalizePath(it.key) == needle }?.value
     }
 
     private fun loadGeminiProjects(geminiDir: File): Map<String, String>? {

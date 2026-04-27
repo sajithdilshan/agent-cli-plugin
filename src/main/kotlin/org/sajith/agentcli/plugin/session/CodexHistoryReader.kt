@@ -130,7 +130,9 @@ object CodexHistoryReader {
                 if (cwd == null && line.contains("\"session_meta\"")) {
                     cwd = extractCwd(line)
                     val resolvedCwd = cwd
-                    if (resolvedCwd != null && !resolvedCwd.trimEnd('/').equals(projectPath.trimEnd('/'), ignoreCase = true)) {
+                    if (resolvedCwd != null &&
+                        SessionPathResolver.normalizePath(resolvedCwd) != SessionPathResolver.normalizePath(projectPath)
+                    ) {
                         return null // Different project
                     }
                     if (hasTitle) break // Have title from index, no need to read further
