@@ -1,8 +1,15 @@
 package org.sajith.agentcli.plugin.settings
 
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.editor.colors.EditorColorsManager
+import com.intellij.openapi.editor.ex.EditorEx
+import com.intellij.openapi.editor.highlighter.EditorHighlighterFactory
+import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.options.BoundSearchableConfigurable
+import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.Messages
+import com.intellij.ui.components.JBTabbedPane
 import com.intellij.ui.dsl.builder.Cell
 import com.intellij.ui.dsl.builder.bindIntText
 import com.intellij.ui.dsl.builder.bindSelected
@@ -11,7 +18,11 @@ import com.intellij.ui.dsl.builder.columns
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.builder.selected
 import org.sajith.agentcli.plugin.notify.HookInstaller
+import java.awt.BorderLayout
+import java.awt.Dimension
 import javax.swing.JCheckBox
+import javax.swing.JComponent
+import javax.swing.JPanel
 
 class AgentCliSettingsConfigurable : BoundSearchableConfigurable(
     "Agent CLI",
@@ -28,15 +39,71 @@ class AgentCliSettingsConfigurable : BoundSearchableConfigurable(
 
     private fun showPreviewDialog() {
         val entries = HookInstaller.preview()
-        val message =
-            buildString {
-                append("The following files will be created/updated:\n\n")
-                for (entry in entries) {
-                    append("── ").append(entry.file).append(if (entry.existed) " (existing)" else " (new)").append(" ──\n")
-                    append(entry.newContent).append("\n\n")
+        if (entries.isEmpty()) {
+            Messages.showInfoMessage("Nothing to preview.", "Hook Installation Preview")
+            return
+        }
+        HookPreviewDialog(entries).show()
+    }
+
+    private class HookPreviewDialog(
+        private val entries: List<HookInstaller.PreviewEntry>,
+    ) : DialogWrapper(true) {
+        private val createdEditors = mutableListOf<com.intellij.openapi.editor.Editor>()
+
+        init {
+            title = "Hook Installation Preview"
+            setOKButtonText("Close")
+            init()
+        }
+
+        override fun createCenterPanel(): JComponent {
+            val root = JPanel(BorderLayout())
+            root.preferredSize = Dimension(820, 560)
+            val tabs = JBTabbedPane()
+            val jsonFileType = FileTypeManager.getInstance().getFileTypeByExtension("json")
+            val factory = EditorFactory.getInstance()
+            for (entry in entries) {
+                val document = factory.createDocument(entry.newContent)
+                val editor = factory.createEditor(document, null, jsonFileType, true) as EditorEx
+                val scheme = EditorColorsManager.getInstance().globalScheme
+                editor.colorsScheme = scheme
+                editor.highlighter =
+                    EditorHighlighterFactory.getInstance().createEditorHighlighter(jsonFileType, scheme, null)
+                with(editor.settings) {
+                    isLineNumbersShown = true
+                    isFoldingOutlineShown = true
+                    isLineMarkerAreaShown = false
+                    isIndentGuidesShown = true
+                    additionalLinesCount = 0
+                    additionalColumnsCount = 0
+                    isCaretRowShown = false
+                    isUseSoftWraps = false
+                    isAdditionalPageAtBottom = false
+                    isVirtualSpace = false
                 }
+                editor.isViewer = true
+                createdEditors.add(editor)
+
+                val tabPanel = JPanel(BorderLayout())
+                tabPanel.add(editor.component, BorderLayout.CENTER)
+                val suffix = if (entry.existed) "existing" else "new"
+                val label = entry.agent.replaceFirstChar { it.uppercase() }
+                tabs.addTab("$label ($suffix)", tabPanel)
+                tabs.setToolTipTextAt(tabs.tabCount - 1, entry.file.toString())
             }
-        Messages.showInfoMessage(message, "Hook Installation Preview")
+            root.add(tabs, BorderLayout.CENTER)
+            return root
+        }
+
+        override fun dispose() {
+            val factory = EditorFactory.getInstance()
+            createdEditors.forEach { runCatching { factory.releaseEditor(it) } }
+            createdEditors.clear()
+            super.dispose()
+        }
+
+        override fun createActions() = arrayOf(okAction)
     }
 
     override fun createPanel() =

@@ -54,6 +54,7 @@ object HookInstaller {
 
     data class PreviewEntry(
         val file: Path,
+        val agent: String,
         val currentContent: String,
         val newContent: String,
         val existed: Boolean,
@@ -66,7 +67,7 @@ object HookInstaller {
         for ((file, agent, events) in configs()) {
             val existing = if (Files.isRegularFile(file)) Files.readString(file) else "{}"
             val merged = applyInstall(existing, agent, events, script)
-            result.add(PreviewEntry(file, existing, merged, Files.isRegularFile(file)))
+            result.add(PreviewEntry(file, agent, existing, merged, Files.isRegularFile(file)))
         }
         return result
     }
