@@ -29,7 +29,28 @@ object HookInstaller {
 
     private val userHome: Path get() = Path.of(System.getProperty("user.home"))
 
-    private val scriptPath: Path get() = userHome.resolve(".agent-cli-plugin/notify.sh")
+    private val isWindows: Boolean get() = System.getProperty("os.name").lowercase().contains("win")
+
+    private val scriptResourceName: String get() = if (isWindows) "notify.ps1" else "notify.sh"
+
+    private val scriptPath: Path get() = userHome.resolve(".agent-cli-plugin").resolve(scriptResourceName)
+
+    /**
+     * The command the hook entry should run. Paths get JSON-encoded by Gson so Windows
+     * backslashes are handled automatically when the config is serialized.
+     */
+    private fun hookCommand(
+        script: Path,
+        scriptEvent: String,
+        agent: String,
+    ): String {
+        val scriptString = script.toString()
+        return if (isWindows) {
+            "powershell -NoProfile -ExecutionPolicy Bypass -File \"$scriptString\" $scriptEvent $agent"
+        } else {
+            "\"$scriptString\" $scriptEvent $agent"
+        }
+    }
 
     data class PreviewEntry(
         val file: Path,
@@ -41,10 +62,10 @@ object HookInstaller {
     /** Pre-compute what install() will write without touching the filesystem. */
     fun preview(): List<PreviewEntry> {
         val result = mutableListOf<PreviewEntry>()
-        val scriptString = scriptPath.toString()
+        val script = scriptPath
         for ((file, agent, events) in configs()) {
             val existing = if (Files.isRegularFile(file)) Files.readString(file) else "{}"
-            val merged = applyInstall(existing, agent, events, scriptString)
+            val merged = applyInstall(existing, agent, events, script)
             result.add(PreviewEntry(file, existing, merged, Files.isRegularFile(file)))
         }
         return result
@@ -59,7 +80,7 @@ object HookInstaller {
                 Files.createDirectories(file.parent)
                 val existed = Files.isRegularFile(file)
                 val existing = if (existed) Files.readString(file) else "{}"
-                val merged = applyInstall(existing, agent, events, script.toString())
+                val merged = applyInstall(existing, agent, events, script)
                 if (merged == existing) continue // nothing to do
                 if (existed) {
                     backupOf(file)?.let { backups.add(it) }
@@ -250,12 +271,13 @@ object HookInstaller {
         val target = scriptPath
         Files.createDirectories(target.parent)
         Files.deleteIfExists(target)
+        val resource = "/notify/$scriptResourceName"
         val source: InputStream =
-            requireNotNull(HookInstaller::class.java.getResourceAsStream("/notify/notify.sh")) {
-                "notify.sh resource missing from plugin jar"
+            requireNotNull(HookInstaller::class.java.getResourceAsStream(resource)) {
+                "$scriptResourceName resource missing from plugin jar"
             }
         source.use { Files.copy(it, target) }
-        if (!System.getProperty("os.name").lowercase().contains("win")) {
+        if (!isWindows) {
             runCatching {
                 Files.setPosixFilePermissions(target, PosixFilePermissions.fromString("rwxr-xr-x"))
             }.onFailure {
@@ -275,7 +297,7 @@ object HookInstaller {
         existing: String,
         agent: String,
         events: List<EventSpec>,
-        scriptPathString: String,
+        script: Path,
     ): String {
         val root =
             runCatching { JsonParser.parseString(existing) }
@@ -304,7 +326,7 @@ object HookInstaller {
                 JsonObject().apply {
                     addProperty(SENTINEL_KEY, SENTINEL_VALUE)
                     addProperty("type", "command")
-                    addProperty("command", "\"$scriptPathString\" ${spec.scriptEvent} $agent")
+                    addProperty("command", hookCommand(script, spec.scriptEvent, agent))
                 }
             val innerArr = JsonArray().apply { add(inner) }
             val entry =
