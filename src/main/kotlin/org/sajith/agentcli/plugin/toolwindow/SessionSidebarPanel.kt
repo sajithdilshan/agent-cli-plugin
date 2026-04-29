@@ -88,6 +88,8 @@ class SessionSidebarPanel(
     private val sessionListPanel: JPanel
     private var isCollapsed = false
     private var historyLoaded = false
+    private var toggleAction: AnAction? = null
+    private var iconStripToolbar: com.intellij.openapi.actionSystem.ActionToolbar? = null
 
     var onCollapseToggle: ((collapsed: Boolean) -> Unit)? = null
 
@@ -115,15 +117,37 @@ class SessionSidebarPanel(
             }
         }
 
-        // Repaint the active session list when attention state changes.
+        // Repaint the active session list when attention state changes, and refresh the
+        // toggle icon so it can show an overlay dot while the sidebar is collapsed.
         project.messageBus.connect(this)
             .subscribe(
                 SessionManager.SESSION_ATTENTION_TOPIC,
                 SessionManager.SessionAttentionListener {
-                    SwingUtilities.invokeLater { activeSessionList.repaint() }
+                    SwingUtilities.invokeLater {
+                        activeSessionList.repaint()
+                        refreshToggleIcon()
+                    }
                 },
             )
         LOG.info("[AgentCLI] SessionSidebarPanel init END")
+    }
+
+    private fun toggleIconForState(): Icon {
+        val base = if (isCollapsed) AllIcons.Actions.ArrowExpand else AllIcons.Actions.ArrowCollapse
+        return if (isCollapsed && anyActiveSessionNeedsAttention()) DotOverlayIcon(base) else base
+    }
+
+    private fun anyActiveSessionNeedsAttention(): Boolean {
+        return SessionManager.getInstance(project).sessions.any { it.needsAttention }
+    }
+
+    /**
+     * Force the toolbar to re-run `update()` on the toggle action so its icon re-picks
+     * the overlay state.
+     */
+    private fun refreshToggleIcon() {
+        toggleAction?.templatePresentation?.icon = toggleIconForState()
+        iconStripToolbar?.updateActionsAsync()
     }
 
     private fun createIconStrip(): JComponent {
@@ -143,7 +167,7 @@ class SessionSidebarPanel(
                         }
                     },
                 )
-                add(
+                val toggle =
                     object : AnAction(
                         "Toggle Sessions Panel",
                         "Show or hide the sessions panel",
@@ -152,18 +176,23 @@ class SessionSidebarPanel(
                         override fun actionPerformed(e: AnActionEvent) {
                             isCollapsed = !isCollapsed
                             sessionListPanel.isVisible = !isCollapsed
-                            e.presentation.icon =
-                                if (isCollapsed) AllIcons.Actions.ArrowExpand else AllIcons.Actions.ArrowCollapse
+                            e.presentation.icon = toggleIconForState()
                             onCollapseToggle?.invoke(isCollapsed)
                         }
-                    },
-                )
+
+                        override fun update(e: AnActionEvent) {
+                            e.presentation.icon = toggleIconForState()
+                        }
+                    }
+                toggleAction = toggle
+                add(toggle)
             }
         val toolbar =
             ActionManager.getInstance()
                 .createActionToolbar(ActionPlaces.TOOLWINDOW_CONTENT, group, false)
         toolbar.targetComponent = this
         toolbar.component.border = MatteBorder(0, 0, 0, 1, JBColor.border())
+        iconStripToolbar = toolbar
         return toolbar.component
     }
 
@@ -692,6 +721,39 @@ class SessionSidebarPanel(
                 }
             }
         }
+    }
+
+    /**
+     * Paints the wrapped icon and overlays a small red dot in the top-right corner.
+     * Used for the sidebar toggle when the panel is collapsed and an active session
+     * is waiting on the user.
+     */
+    private class DotOverlayIcon(private val base: Icon) : Icon {
+        private val fillColor = JBColor(Color(0xE53935), Color(0xEF5350))
+
+        override fun paintIcon(
+            c: Component?,
+            g: Graphics,
+            x: Int,
+            y: Int,
+        ) {
+            base.paintIcon(c, g, x, y)
+            val g2 = g.create() as Graphics2D
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                val diameter = JBUIScale.scale(6)
+                val dotX = x + iconWidth - diameter
+                val dotY = y
+                g2.color = fillColor
+                g2.fillOval(dotX, dotY, diameter, diameter)
+            } finally {
+                g2.dispose()
+            }
+        }
+
+        override fun getIconWidth(): Int = base.iconWidth
+
+        override fun getIconHeight(): Int = base.iconHeight
     }
 
     private object AttentionDotIcon : Icon {
