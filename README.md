@@ -111,7 +111,8 @@ Platform version is controlled via `gradle.properties` (`platformVersion`); the 
 * **No embedded terminal / JCEF message** — use an IDE distribution that ships **JCEF** (typically recent JetBrains IDEs on supported OS/architectures).
 * **CLI not found or wrong shell** — ensure `PATH` in the IDE environment includes the agent CLI binary; adjust the relevant command in **Settings → Tools → Agent CLI**.
 * **History empty** — history is resolved from the agent's project folder under your home directory; paths must match how the agent encodes the project.
-* **Terminal output looks laggy on huge paste-ins** — try enabling **Flow control** in settings. Disabled by default because it adds a small round-trip per ~200 KB of output.
+* **Terminal output looks laggy on huge paste-ins** — try enabling **Flow control** in settings. Disabled by default
+  because it adds a small round-trip per \~200 KB of output.
 * **Attention balloon never fires** — re-install hooks from **Settings → Tools → Agent CLI → Attention Notifications** after upgrading the plugin or the agent CLI.
 
 ## Version
