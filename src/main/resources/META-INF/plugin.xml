@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>org.sajith.agentcli.plugin</id>
     <name>Agent CLI</name>
-    <version>0.7.0</version>
+    <version>0.8.0</version>
     <vendor>Sajith Edirisinghe</vendor>
 
     <description><![CDATA[
@@ -20,15 +20,11 @@
     ]]></description>
 
     <change-notes><![CDATA[
-    <h3>0.7.0</h3>
+    <h3>0.8.0</h3>
     <ul>
-        <li>Added attention notifications — sessions needing input show a red dot and fire an IDE balloon; opt-in hook installer merges idempotently into Claude / Gemini / Codex configs with .bak backups and clean uninstall.</li>
-        <li>Added Windows support for notification hooks via a bundled PowerShell script.</li>
-        <li>Added an "Enable flow control" setting so users can opt out of PTY watermark throttling.</li>
-        <li>Reworked the hook installer settings UI with a richer preview grouped by agent.</li>
-        <li>Fixed session-close leaks by forcibly destroying the PTY process so agent processes don't linger.</li>
-        <li>Fixed cross-platform session path handling (Windows drive letters, backslashes, trailing slashes) for Codex / Claude / Gemini session lookups.</li>
-        <li>Updated bundled xterm.js and added CSS overrides for xterm 6.0 scroll shadows and viewport background.</li>
+        <li>Added an editor-hosted session view — right-click any active or historical session and pick "Open in Code Editor" to move it into a regular editor tab; a "Return to plugin view" link moves it back. Closing the editor tab closes the session.</li>
+        <li>Added an "Always open new sessions in code editor" setting so new sessions can launch directly as editor tabs instead of in the tool window.</li>
+        <li>Added a red overlay dot on the sidebar collapse/expand toggle so attention-needed state stays visible when the session list is collapsed.</li>
     </ul>
     <p>Full changelogs can be found at <a href="https://github.com/sajithdilshan/agent-cli-plugin/tree/main/changelog">https://github.com/sajithdilshan/agent-cli-plugin/tree/main/changelog</a></p>
     ]]></change-notes>
