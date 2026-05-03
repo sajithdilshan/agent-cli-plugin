@@ -63,6 +63,7 @@ No Warranty: This software is provided "as is," without warranty of any kind. Us
 | **Codex command** | Command used to start Codex CLI (default: `codex`). |
 | **Terminal font size** | Font size for the embedded xterm (allowed range as in the settings UI). |
 | **Enable flow control** | Throttle PTY output behind an xterm.js write-ack watermark. Leave off unless fast-output agents cause terminal stuttering. |
+| **Always open new sessions in code editor** | When enabled, new sessions open as regular editor tabs instead of in the tool window. You can still open individual sessions in the editor on demand via the sidebar's right-click menu regardless of this setting. |
 | **Attention Notifications** | Install / uninstall per-agent hook scripts that notify the IDE when an agent needs attention. |
 
 Persistent settings are stored in the application-level component configured in `plugin.xml`.

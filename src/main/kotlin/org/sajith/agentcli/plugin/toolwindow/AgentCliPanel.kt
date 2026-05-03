@@ -38,6 +38,7 @@ class AgentCliPanel(
     private val terminalPanel = JPanel(terminalCardLayout)
     private val terminals = mutableMapOf<String, EmbeddedAgentTerminal>()
     private var activeSessionId: String? = null
+    private var selectedEditorHosted = false
 
     private val sidebar =
         SessionSidebarPanel(
@@ -68,6 +69,7 @@ class AgentCliPanel(
             }
         }
         add(splitter, BorderLayout.CENTER)
+        updateTerminalPanelVisibility()
 
         // Keep embedded terminals in sync when the IDE LaF / editor colors change.
         project.messageBus.connect(parentDisposable)
@@ -161,9 +163,19 @@ class AgentCliPanel(
     }
 
     fun createNewSession(agentType: AgentType = AgentType.CLAUDE) {
+        if (AgentCliSettings.getInstance().alwaysOpenNewSessionInEditor) {
+            val displayName = defaultNewSessionName()
+            AgentCliEditorBridge.getInstance(project).openNewSessionInEditor(agentType, displayName)
+            return
+        }
         val cmd = getCommand(agentType)
         val session = sessionManager.createSession(agentType = agentType)
         createTerminalForSession(session, cmd)
+    }
+
+    private fun defaultNewSessionName(): String {
+        val existing = sessionManager.sessions.size
+        return "Session ${existing + 1}"
     }
 
     private fun resumeSession(
@@ -225,15 +237,34 @@ class AgentCliPanel(
         terminal.setResizeEnabled(true)
 
         terminalCardLayout.show(terminalPanel, session.id)
+        selectedEditorHosted = false
+        updateTerminalPanelVisibility()
         updateToolWindowTitle()
 
         terminal.start()
     }
 
+    /**
+     * Look up the virtual file that an editor-hosted session is already open in.
+     *
+     * For resumed sessions the key == agentSessionId so we could rebuild the file, but
+     * for brand-new editor sessions the key is a random UUID stored on the session.
+     * Either way, asking FileEditorManager for its open files is simpler and avoids
+     * re-deriving keys.
+     */
+    private fun virtualFileFor(session: AgentCliSession): AgentCliSessionVirtualFile? {
+        val key = session.editorFileKey ?: session.agentSessionId ?: return null
+        return FileEditorManager.getInstance(project).openFiles
+            .asSequence()
+            .filterIsInstance<AgentCliSessionVirtualFile>()
+            .firstOrNull { it.key == key }
+    }
+
     private fun switchToSession(session: AgentCliSession) {
         if (session.isEditorHosted) {
-            val agentSessionId = session.agentSessionId ?: return
-            val file = AgentCliSessionVirtualFile(session.agentType, agentSessionId, session.displayName)
+            val file = virtualFileFor(session) ?: return
+            selectedEditorHosted = true
+            updateTerminalPanelVisibility()
             FileEditorManager.getInstance(project).openFile(file, true)
             return
         }
@@ -248,6 +279,8 @@ class AgentCliPanel(
             sidebar.selectSession(session)
             terminal.focus()
             attentionService.clearByPluginSessionId(session.id)
+            selectedEditorHosted = false
+            updateTerminalPanelVisibility()
             updateToolWindowTitle()
         } else {
             LOG.warn("[AgentCLI] switchToSession: no terminal found for session ${session.id}")
@@ -256,8 +289,7 @@ class AgentCliPanel(
 
     private fun closeSession(session: AgentCliSession) {
         if (session.isEditorHosted) {
-            val agentSessionId = session.agentSessionId ?: return
-            val file = AgentCliSessionVirtualFile(session.agentType, agentSessionId, session.displayName)
+            val file = virtualFileFor(session) ?: return
             // Closing the editor triggers AgentCliSessionFileEditor.dispose(), which
             // calls SessionManager.removeSession and fires SESSION_LIFECYCLE_TOPIC,
             // which removes the row from the sidebar's active list.
@@ -306,6 +338,10 @@ class AgentCliPanel(
         activeSessionId?.let { id ->
             sessionManager.sessions.find { it.id == id }?.let { sidebar.selectSession(it) }
         }
+        if (activeSessionId == null) {
+            selectedEditorHosted = false
+        }
+        updateTerminalPanelVisibility()
         updateToolWindowTitle()
     }
 
@@ -327,6 +363,20 @@ class AgentCliPanel(
                 projectPath,
             )
         }
+    }
+
+    /**
+     * Hide the terminal panel when no terminal session is active (either because the
+     * selected session lives in an editor tab, or because there are no sessions at all).
+     * Keeps the sidebar from looking like a dead black rectangle in those cases.
+     */
+    private fun updateTerminalPanelVisibility() {
+        val hasTerminal = activeSessionId != null && !selectedEditorHosted
+        sidebar.setCollapseButtonVisible(hasTerminal)
+        if (terminalPanel.isVisible == hasTerminal) return
+        terminalPanel.isVisible = hasTerminal
+        splitter.revalidate()
+        splitter.repaint()
     }
 
     private fun updateToolWindowTitle() {

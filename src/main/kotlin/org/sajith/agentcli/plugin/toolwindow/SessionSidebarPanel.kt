@@ -63,8 +63,26 @@ class SessionSidebarPanel(
     private var historyLoaded = false
     private var toggleAction: AnAction? = null
     private var iconStripToolbar: ActionToolbar? = null
+    private var toggleButtonVisible = true
 
     var onCollapseToggle: ((collapsed: Boolean) -> Unit)? = null
+
+    /**
+     * Show / hide the sidebar collapse button. Hide it when there's no terminal view
+     * to collapse into — the button does nothing useful then and looks broken.
+     * Force-expands the sidebar if it was collapsed when the button gets hidden,
+     * so users aren't stranded with a 0-width sidebar and no way to open it.
+     */
+    fun setCollapseButtonVisible(visible: Boolean) {
+        if (toggleButtonVisible == visible) return
+        toggleButtonVisible = visible
+        if (!visible && isCollapsed) {
+            isCollapsed = false
+            sessionListPanel.isVisible = true
+            onCollapseToggle?.invoke(false)
+        }
+        refreshToggleIcon()
+    }
 
     init {
         LOG.info("[AgentCLI] SessionSidebarPanel init START")
@@ -155,6 +173,7 @@ class SessionSidebarPanel(
 
                         override fun update(e: AnActionEvent) {
                             e.presentation.icon = toggleIconForState()
+                            e.presentation.isVisible = toggleButtonVisible
                         }
                     }
                 toggleAction = toggle

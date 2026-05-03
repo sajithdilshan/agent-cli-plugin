@@ -28,13 +28,11 @@ import javax.swing.SwingUtilities
 /**
  * FileEditor that hosts an agent CLI session inside an IntelliJ editor tab.
  *
- * Lifecycle:
- *  - `init` spawns a fresh session via SessionManager + EmbeddedAgentTerminal, running
- *    the agent's resume command for [AgentCliSession.id].
- *  - On [dispose] (editor tab closed for any reason), the PTY is torn down and the
- *    session is removed from SessionManager. If the user clicked "Return to plugin
- *    view", a RESUME_IN_PLUGIN_TOPIC message is published from inside [dispose] so
- *    the tool window can reopen the session there.
+ * Two modes:
+ *  - Resume: `file.agentSessionId` is set; the editor runs the agent's resume command.
+ *  - New session: `file.agentSessionId` is null; the editor runs the plain agent command
+ *    so the user starts a fresh conversation in the editor tab. "Return to plugin view"
+ *    is not offered for this mode because the agent-side id doesn't exist yet.
  */
 class AgentCliSessionFileEditor(
     private val project: Project,
@@ -59,9 +57,15 @@ class AgentCliSessionFileEditor(
                 agentType = file.agentType,
                 agentSessionId = file.agentSessionId,
                 isEditorHosted = true,
-            )
+            ).also { it.editorFileKey = file.key }
 
-        val command = resumeCommandFor(file.agentType, getCommand(file.agentType), file.agentSessionId)
+        val baseCmd = getCommand(file.agentType)
+        val command =
+            if (file.agentSessionId != null) {
+                resumeCommandFor(file.agentType, baseCmd, file.agentSessionId)
+            } else {
+                baseCmd
+            }
         val workingDir = project.basePath ?: System.getProperty("user.home")
 
         terminal =
@@ -71,7 +75,7 @@ class AgentCliSessionFileEditor(
                 session = session,
                 workingDirectory = workingDir,
                 command = command,
-                isResume = true,
+                isResume = file.agentSessionId != null,
                 onExit = {
                     SwingUtilities.invokeLater {
                         if (!disposed) {
@@ -95,12 +99,6 @@ class AgentCliSessionFileEditor(
     }
 
     private fun createBanner(): JComponent {
-        val link =
-            ActionLink("Return to plugin view") {
-                returnToPluginRequested = true
-                com.intellij.openapi.fileEditor.FileEditorManager.getInstance(project).closeFile(file)
-            }
-
         val label =
             JLabel("Session opened in editor.").apply {
                 foreground = JBColor.GRAY
@@ -108,12 +106,25 @@ class AgentCliSessionFileEditor(
                 border = JBUI.Borders.emptyRight(8)
             }
 
-        return JPanel(BorderLayout()).apply {
-            background = JBColor.PanelBackground
-            border = JBUI.Borders.empty(4, 8)
-            add(label, BorderLayout.WEST)
-            add(link, BorderLayout.EAST)
+        val banner =
+            JPanel(BorderLayout()).apply {
+                background = JBColor.PanelBackground
+                border = JBUI.Borders.empty(4, 8)
+                add(label, BorderLayout.WEST)
+            }
+
+        // Return-to-plugin only works when we have an agent-side id to resume from.
+        // For brand-new editor sessions there is no id yet, so the link is omitted.
+        if (file.agentSessionId != null) {
+            val link =
+                ActionLink("Return to plugin view") {
+                    returnToPluginRequested = true
+                    com.intellij.openapi.fileEditor.FileEditorManager.getInstance(project).closeFile(file)
+                }
+            banner.add(link, BorderLayout.EAST)
         }
+
+        return banner
     }
 
     private fun resumeCommandFor(
@@ -163,11 +174,12 @@ class AgentCliSessionFileEditor(
         SessionManager.getInstance(project).removeSession(session)
         Disposer.dispose(disposable)
 
-        if (returnToPluginRequested) {
+        val resumeId = file.agentSessionId
+        if (returnToPluginRequested && resumeId != null) {
             // Post after this dispose completes so the tool window sees a clean state.
             val bridge = AgentCliEditorBridge.getInstance(project)
             ApplicationManager.getApplication().invokeLater {
-                bridge.requestResumeInPluginView(file.agentType, file.agentSessionId, file.displayName)
+                bridge.requestResumeInPluginView(file.agentType, resumeId, file.displayName)
             }
         }
     }

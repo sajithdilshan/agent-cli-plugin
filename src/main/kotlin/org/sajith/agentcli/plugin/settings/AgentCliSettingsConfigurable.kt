@@ -10,13 +10,7 @@ import com.intellij.openapi.options.BoundSearchableConfigurable
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.components.JBTabbedPane
-import com.intellij.ui.dsl.builder.Cell
-import com.intellij.ui.dsl.builder.bindIntText
-import com.intellij.ui.dsl.builder.bindSelected
-import com.intellij.ui.dsl.builder.bindText
-import com.intellij.ui.dsl.builder.columns
-import com.intellij.ui.dsl.builder.panel
-import com.intellij.ui.dsl.builder.selected
+import com.intellij.ui.dsl.builder.*
 import org.sajith.agentcli.plugin.notify.HookInstaller
 import java.awt.BorderLayout
 import java.awt.Dimension
@@ -254,6 +248,16 @@ class AgentCliSettingsConfigurable : BoundSearchableConfigurable(
                     checkBox("Enable flow control")
                         .bindSelected(settings::flowControlEnabled)
                         .comment("Throttle fast PTY output to prevent terminal buffer overflows (restart session to apply)")
+                }
+            }
+            group("Session Placement") {
+                row {
+                    checkBox("Always open new sessions in code editor")
+                        .bindSelected(settings::alwaysOpenNewSessionInEditor)
+                        .comment(
+                            "When enabled, new sessions open as editor tabs instead of in the tool window. " +
+                                    "Resuming from history still honors this setting.",
+                        )
                 }
             }
         }

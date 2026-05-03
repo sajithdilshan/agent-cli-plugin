@@ -21,7 +21,15 @@ class AgentCliEditorBridge(private val project: Project) {
         agentSessionId: String,
         displayName: String,
     ) {
-        val file = AgentCliSessionVirtualFile(agentType, agentSessionId, displayName)
+        val file = AgentCliSessionVirtualFile.forResume(agentType, agentSessionId, displayName)
+        FileEditorManager.getInstance(project).openFile(file, true)
+    }
+
+    fun openNewSessionInEditor(
+        agentType: AgentType,
+        displayName: String,
+    ) {
+        val file = AgentCliSessionVirtualFile.forNewSession(agentType, displayName)
         FileEditorManager.getInstance(project).openFile(file, true)
     }
 

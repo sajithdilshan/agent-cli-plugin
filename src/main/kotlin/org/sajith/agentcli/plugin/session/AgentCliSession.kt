@@ -13,6 +13,7 @@ data class AgentCliSession(
     @Transient var needsAttention: Boolean = false,
     @Transient var attentionMessage: String? = null,
     @Transient var isEditorHosted: Boolean = false,
+    @Transient var editorFileKey: String? = null,
 ) {
     val displayName: String
         get() = name
