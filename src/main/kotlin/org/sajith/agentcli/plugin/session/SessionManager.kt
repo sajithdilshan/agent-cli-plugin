@@ -19,6 +19,7 @@ class SessionManager(private val project: Project) {
         name: String? = null,
         agentType: AgentType = AgentType.CLAUDE,
         agentSessionId: String? = null,
+        isEditorHosted: Boolean = false,
     ): AgentCliSession {
         sessionCounter++
         val session =
@@ -26,11 +27,13 @@ class SessionManager(private val project: Project) {
                 name = name ?: "Session $sessionCounter",
                 agentType = agentType,
                 agentSessionId = agentSessionId,
+                isEditorHosted = isEditorHosted,
             )
         if (agentSessionId != null) {
             openSessionIds.getOrPut(agentType) { mutableSetOf() }.add(agentSessionId)
         }
         activeSessions.add(session)
+        project.messageBus.syncPublisher(SESSION_LIFECYCLE_TOPIC).sessionAdded(session)
         return session
     }
 
@@ -40,6 +43,7 @@ class SessionManager(private val project: Project) {
         session.attentionMessage = null
         activeSessions.remove(session)
         session.agentSessionId?.let { openSessionIds[session.agentType]?.remove(it) }
+        project.messageBus.syncPublisher(SESSION_LIFECYCLE_TOPIC).sessionRemoved(session)
     }
 
     fun findById(sessionId: String): AgentCliSession? = activeSessions.firstOrNull { it.id == sessionId }
@@ -74,9 +78,18 @@ class SessionManager(private val project: Project) {
         fun attentionChanged(session: AgentCliSession)
     }
 
+    interface SessionLifecycleListener {
+        fun sessionAdded(session: AgentCliSession) {}
+
+        fun sessionRemoved(session: AgentCliSession) {}
+    }
+
     companion object {
         val SESSION_ATTENTION_TOPIC: Topic<SessionAttentionListener> =
             Topic.create("AgentCLI.SessionAttention", SessionAttentionListener::class.java)
+
+        val SESSION_LIFECYCLE_TOPIC: Topic<SessionLifecycleListener> =
+            Topic.create("AgentCLI.SessionLifecycle", SessionLifecycleListener::class.java)
 
         fun getInstance(project: Project): SessionManager = project.getService(SessionManager::class.java)
     }

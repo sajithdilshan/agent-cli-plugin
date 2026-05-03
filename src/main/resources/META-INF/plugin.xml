@@ -55,6 +55,8 @@
 
         <httpRequestHandler implementation="org.sajith.agentcli.plugin.notify.AgentCliNotifyHandler"/>
 
+        <fileEditorProvider implementation="org.sajith.agentcli.plugin.editor.AgentCliSessionFileEditorProvider"/>
+
         <notificationGroup id="Agent CLI Attention"
                            displayType="BALLOON"
                            isLogByDefault="false"

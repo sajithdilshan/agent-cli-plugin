@@ -3,11 +3,7 @@ package org.sajith.agentcli.plugin.toolwindow
 import com.intellij.icons.AllIcons
 import com.intellij.ide.DataManager
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.actionSystem.ActionManager
-import com.intellij.openapi.actionSystem.ActionPlaces
-import com.intellij.openapi.actionSystem.AnAction
-import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
@@ -19,40 +15,15 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.ui.JBUI
 import org.sajith.agentcli.plugin.AgentType
-import org.sajith.agentcli.plugin.session.AgentCliSession
-import org.sajith.agentcli.plugin.session.ClaudeCodeHistoryReader
-import org.sajith.agentcli.plugin.session.CodexHistoryReader
-import org.sajith.agentcli.plugin.session.CursorHistoryReader
-import org.sajith.agentcli.plugin.session.GeminiHistoryReader
-import org.sajith.agentcli.plugin.session.HistoricalSession
-import org.sajith.agentcli.plugin.session.SessionManager
+import org.sajith.agentcli.plugin.session.*
 import org.sajith.agentcli.plugin.settings.AgentCliSettings
-import java.awt.BorderLayout
-import java.awt.CardLayout
-import java.awt.Color
-import java.awt.Component
-import java.awt.Cursor
-import java.awt.Dimension
-import java.awt.Font
-import java.awt.Graphics
-import java.awt.Graphics2D
-import java.awt.RenderingHints
+import java.awt.*
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.time.LocalDate
 import java.time.temporal.WeekFields
-import java.util.Locale
-import javax.swing.BoxLayout
-import javax.swing.DefaultListModel
-import javax.swing.Icon
-import javax.swing.JComponent
-import javax.swing.JLabel
-import javax.swing.JList
-import javax.swing.JPanel
-import javax.swing.ListCellRenderer
-import javax.swing.ListSelectionModel
-import javax.swing.SwingConstants
-import javax.swing.SwingUtilities
+import java.util.*
+import javax.swing.*
 import javax.swing.Timer
 import javax.swing.border.MatteBorder
 
@@ -73,6 +44,8 @@ class SessionSidebarPanel(
     private val onSessionDeleted: (AgentCliSession) -> Unit,
     private val onResumeSession: (agentType: AgentType, sessionId: String, title: String?) -> Unit,
     private val onHistorySessionDeleted: (HistoricalSession) -> Unit,
+    private val onOpenSessionInEditor: (AgentCliSession) -> Unit,
+    private val onOpenHistorySessionInEditor: (HistoricalSession) -> Unit,
 ) : JPanel(BorderLayout()), Disposable {
     private val activeSessionListModel = DefaultListModel<AgentCliSession>()
     private val activeSessionList = JBList(activeSessionListModel)
@@ -89,7 +62,7 @@ class SessionSidebarPanel(
     private var isCollapsed = false
     private var historyLoaded = false
     private var toggleAction: AnAction? = null
-    private var iconStripToolbar: com.intellij.openapi.actionSystem.ActionToolbar? = null
+    private var iconStripToolbar: ActionToolbar? = null
 
     var onCollapseToggle: ((collapsed: Boolean) -> Unit)? = null
 
@@ -303,6 +276,19 @@ class SessionSidebarPanel(
 
         val group =
             DefaultActionGroup().apply {
+                if (session.agentSessionId != null && !session.isEditorHosted) {
+                    add(
+                        object : AnAction(
+                            "Open in Code Editor",
+                            "Move this session into an editor tab",
+                            AllIcons.Actions.MoveToWindow,
+                        ) {
+                            override fun actionPerformed(e: AnActionEvent) {
+                                onOpenSessionInEditor(session)
+                            }
+                        },
+                    )
+                }
                 add(
                     object : AnAction("Close Session", "Close this session", AllIcons.Actions.Close) {
                         override fun actionPerformed(e: AnActionEvent) {
@@ -343,6 +329,17 @@ class SessionSidebarPanel(
 
         val group =
             DefaultActionGroup().apply {
+                add(
+                    object : AnAction(
+                        "Open in Code Editor",
+                        "Resume this session in an editor tab",
+                        AllIcons.Actions.MoveToWindow,
+                    ) {
+                        override fun actionPerformed(e: AnActionEvent) {
+                            onOpenHistorySessionInEditor(session)
+                        }
+                    },
+                )
                 add(
                     object : AnAction("Delete Session", "Delete session history", AllIcons.Actions.GC) {
                         override fun actionPerformed(e: AnActionEvent) {
@@ -445,10 +442,10 @@ class SessionSidebarPanel(
         return JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             background = JBColor.PanelBackground
-            add(javax.swing.Box.createVerticalGlue())
+            add(Box.createVerticalGlue())
             dotsLabel.alignmentX = CENTER_ALIGNMENT
             add(dotsLabel)
-            add(javax.swing.Box.createVerticalGlue())
+            add(Box.createVerticalGlue())
         }
     }
 
@@ -561,9 +558,13 @@ class SessionSidebarPanel(
 
     fun addSession(session: AgentCliSession) {
         activeSessionListModel.addElement(session)
-        activeSessionList.selectedIndex = activeSessionListModel.size() - 1
-        selectedSession = session
-        historyList.clearSelection()
+        // Editor-hosted sessions live in an editor tab; selecting them here would re-enter
+        // FileEditorManager.openFile while the current open is still in flight.
+        if (!session.isEditorHosted) {
+            activeSessionList.selectedIndex = activeSessionListModel.size() - 1
+            selectedSession = session
+            historyList.clearSelection()
+        }
         // Refresh history to exclude the newly opened session
         loadHistory()
     }

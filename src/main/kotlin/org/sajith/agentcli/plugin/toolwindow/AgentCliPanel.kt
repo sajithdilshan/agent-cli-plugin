@@ -4,20 +4,24 @@ import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.FileEditorManagerEvent
+import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.ui.OnePixelSplitter
-import org.jetbrains.ide.BuiltInServerManager
 import org.sajith.agentcli.plugin.AgentType
+import org.sajith.agentcli.plugin.editor.AgentCliEditorBridge
+import org.sajith.agentcli.plugin.editor.AgentCliSessionVirtualFile
 import org.sajith.agentcli.plugin.notify.SessionAttentionService
 import org.sajith.agentcli.plugin.session.AgentCliSession
+import org.sajith.agentcli.plugin.session.HistoricalSession
 import org.sajith.agentcli.plugin.session.SessionHistoryDeleter
 import org.sajith.agentcli.plugin.session.SessionManager
 import org.sajith.agentcli.plugin.settings.AgentCliSettings
-import org.sajith.agentcli.plugin.terminal.CefTerminalPanel
-import org.sajith.agentcli.plugin.terminal.PtyBridge
-import org.sajith.agentcli.plugin.terminal.TerminalFlowController
+import org.sajith.agentcli.plugin.terminal.EmbeddedAgentTerminal
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import javax.swing.JPanel
@@ -32,8 +36,7 @@ class AgentCliPanel(
     private val attentionService = SessionAttentionService.getInstance(project)
     private val terminalCardLayout = CardLayout()
     private val terminalPanel = JPanel(terminalCardLayout)
-    private val terminalPanels = mutableMapOf<String, CefTerminalPanel>()
-    private val ptyBridges = mutableMapOf<String, PtyBridge>()
+    private val terminals = mutableMapOf<String, EmbeddedAgentTerminal>()
     private var activeSessionId: String? = null
 
     private val sidebar =
@@ -45,6 +48,8 @@ class AgentCliPanel(
             onSessionDeleted = { session -> deleteSession(session) },
             onResumeSession = { agentType, sessionId, title -> resumeSession(agentType, sessionId, title) },
             onHistorySessionDeleted = { historicalSession -> deleteHistorySession(historicalSession) },
+            onOpenSessionInEditor = { session -> openSessionInEditor(session) },
+            onOpenHistorySessionInEditor = { historicalSession -> openHistorySessionInEditor(historicalSession) },
         )
 
     private val splitter = OnePixelSplitter(false, 0.2f)
@@ -69,7 +74,7 @@ class AgentCliPanel(
             .subscribe(
                 LafManagerListener.TOPIC,
                 LafManagerListener {
-                    terminalPanels.values.forEach { it.applyTheme() }
+                    terminals.values.forEach { it.applyTheme() }
                 },
             )
 
@@ -81,6 +86,78 @@ class AgentCliPanel(
                     sidebar.loadHistory()
                 },
             )
+
+        // When the editor-hosted session asks to return to the plugin view, resume here.
+        project.messageBus.connect(parentDisposable)
+            .subscribe(
+                AgentCliEditorBridge.RESUME_IN_PLUGIN_TOPIC,
+                AgentCliEditorBridge.ResumeInPluginListener { agentType, sessionId, displayName ->
+                    toolWindow.activate(null)
+                    resumeSession(agentType, sessionId, displayName)
+                },
+            )
+
+        // Refresh the history list whenever an editor-hosted session tab is closed so
+        // the session reappears under Today / Yesterday / etc.
+        project.messageBus.connect(parentDisposable)
+            .subscribe(
+                FileEditorManagerListener.FILE_EDITOR_MANAGER,
+                object : FileEditorManagerListener {
+                    override fun fileClosed(
+                        source: FileEditorManager,
+                        file: VirtualFile,
+                    ) {
+                        if (file is AgentCliSessionVirtualFile) {
+                            sidebar.loadHistory()
+                        }
+                    }
+
+                    override fun selectionChanged(event: FileEditorManagerEvent) {}
+                },
+            )
+
+        // Mirror editor-hosted sessions in the sidebar's active list so users can see
+        // and switch back to them. Terminal-hosted sessions are already managed inline
+        // by createTerminalForSession / closeSession, but we also ignore duplicate
+        // adds defensively via sidebar contains-check.
+        project.messageBus.connect(parentDisposable)
+            .subscribe(
+                SessionManager.SESSION_LIFECYCLE_TOPIC,
+                object : SessionManager.SessionLifecycleListener {
+                    override fun sessionAdded(session: AgentCliSession) {
+                        if (session.isEditorHosted) {
+                            // Defer: sessionAdded fires from inside FileEditorManager.openFile's
+                            // coroutine on EDT; mutating the sidebar synchronously here can
+                            // re-enter openFile via the list selection listener and deadlock.
+                            SwingUtilities.invokeLater { sidebar.addSession(session) }
+                        }
+                    }
+
+                    override fun sessionRemoved(session: AgentCliSession) {
+                        if (session.isEditorHosted) {
+                            SwingUtilities.invokeLater { sidebar.removeSession(session) }
+                        }
+                    }
+                },
+            )
+    }
+
+    private fun openSessionInEditor(session: AgentCliSession) {
+        val agentSessionId = session.agentSessionId ?: return
+        val agentType = session.agentType
+        val displayName = session.displayName
+        closeSession(session)
+        AgentCliEditorBridge.getInstance(project).openInEditor(agentType, agentSessionId, displayName)
+    }
+
+    private fun openHistorySessionInEditor(historicalSession: HistoricalSession) {
+        AgentCliEditorBridge.getInstance(project).openInEditor(
+            historicalSession.agentType,
+            historicalSession.sessionId,
+            historicalSession.displayName,
+        )
+        // The editor's createSession fires SESSION_LIFECYCLE_TOPIC which adds the row
+        // to the sidebar and reloads history; no manual refresh needed here.
     }
 
     fun createNewSession(agentType: AgentType = AgentType.CLAUDE) {
@@ -96,13 +173,19 @@ class AgentCliPanel(
     ) {
         val cmd = getCommand(agentType)
         val session = sessionManager.createSession(title, agentType = agentType, agentSessionId = sessionId)
-        val resumeCmd =
-            when (agentType) {
-                AgentType.CODEX -> "$cmd resume $sessionId"
-                else -> "$cmd --resume $sessionId"
-            }
+        val resumeCmd = resumeCommandFor(agentType, cmd, sessionId)
         createTerminalForSession(session, resumeCmd, isResume = true)
     }
+
+    private fun resumeCommandFor(
+        agentType: AgentType,
+        cmd: String,
+        sessionId: String,
+    ): String =
+        when (agentType) {
+            AgentType.CODEX -> "$cmd resume $sessionId"
+            else -> "$cmd --resume $sessionId"
+        }
 
     private fun getCommand(agentType: AgentType): String {
         val settings = AgentCliSettings.getInstance()
@@ -121,144 +204,80 @@ class AgentCliPanel(
     ) {
         val workingDir = project.basePath ?: System.getProperty("user.home")
 
-        lateinit var ptyBridge: PtyBridge
-        lateinit var flowController: TerminalFlowController
-
-        val cefPanel =
-            CefTerminalPanel(
+        val terminal =
+            EmbeddedAgentTerminal(
                 parentDisposable = parentDisposable,
-                onInput = { data ->
-                    ptyBridge.write(data)
-                    // Any user input implicitly acknowledges an attention prompt.
-                    attentionService.clearByPluginSessionId(session.id)
-                },
-                onResize = { cols, rows -> ptyBridge.resize(cols, rows) },
-                onAck = { flowController.ack() },
-                loadingText = if (isResume) "Resuming Session..." else "Starting Session...",
-            )
-
-        val flowControlEnabled = AgentCliSettings.getInstance().flowControlEnabled
-        flowController =
-            TerminalFlowController(
-                highWatermark = 8,
-                lowWatermark = 3,
-                callbackByteLimit = 200_000,
-                onWrite = { data, needsAck ->
-                    if (needsAck && flowControlEnabled) {
-                        cefPanel.writeToTerminalAck(data)
-                    } else {
-                        cefPanel.writeToTerminal(data)
-                    }
-                },
-                onPause = { if (flowControlEnabled) ptyBridge.pause() },
-                onResume = { if (flowControlEnabled) ptyBridge.resume() },
-            )
-
-        val shellCommand = shellCommandFor(command)
-
-        val env = HashMap(System.getenv())
-        env["TERM"] = "xterm-256color"
-        env["COLORTERM"] = "truecolor"
-
-        // Session identity + notify endpoint for per-agent hook scripts.
-        env["AGENT_CLI_PLUGIN_SESSION_ID"] = session.id
-        env["AGENT_CLI_PLUGIN_AGENT"] = session.agentType.name.lowercase()
-        val port = BuiltInServerManager.getInstance().port
-        env["AGENT_CLI_PLUGIN_NOTIFY_URL"] = "http://127.0.0.1:$port/agent-cli-plugin/notify"
-
-        // Ensure the PTY locale is UTF-8 so programs interpret I/O correctly.
-        // If the inherited LANG/LC_CTYPE is missing or set to "C"/"POSIX",
-        // fall back to en_US.UTF-8 to avoid ASCII-only mode.
-        val lang = env["LANG"].orEmpty()
-        val lcAll = env["LC_ALL"].orEmpty()
-        val lcCtype = env["LC_CTYPE"].orEmpty()
-        val hasUtf8Locale =
-            listOf(lang, lcAll, lcCtype).any {
-                it.contains("UTF-8", ignoreCase = true) || it.contains("utf8", ignoreCase = true)
-            }
-        if (!hasUtf8Locale) {
-            env["LANG"] = "en_US.UTF-8"
-        }
-
-        ptyBridge =
-            PtyBridge(
-                command = shellCommand,
+                project = project,
+                session = session,
                 workingDirectory = workingDir,
-                environment = env,
-                onOutput = { data -> flowController.write(data) },
-                onExit = { exitCode ->
-                    LOG.info("[AgentCLI] Agent process exited with code $exitCode for session ${session.id}")
-                    SwingUtilities.invokeLater { closeSession(session) }
-                },
+                command = command,
+                isResume = isResume,
+                onExit = { closeSession(session) },
             )
-        Disposer.register(parentDisposable, ptyBridge)
 
-        terminalPanels[session.id] = cefPanel
-        ptyBridges[session.id] = ptyBridge
-        terminalPanel.add(cefPanel.component, session.id)
+        terminals[session.id] = terminal
+        terminalPanel.add(terminal.component, session.id)
         sidebar.addSession(session)
 
         // Disable resize on the previously active terminal, enable on the new one
-        activeSessionId?.let { terminalPanels[it]?.setResizeEnabled(false) }
+        activeSessionId?.let { terminals[it]?.setResizeEnabled(false) }
         activeSessionId = session.id
-        cefPanel.setResizeEnabled(true)
+        terminal.setResizeEnabled(true)
 
         terminalCardLayout.show(terminalPanel, session.id)
         updateToolWindowTitle()
 
-        ApplicationManager.getApplication().executeOnPooledThread {
-            try {
-                ptyBridge.start()
-            } catch (e: Exception) {
-                LOG.error("[AgentCLI] Failed to start PTY for session ${session.id}", e)
-            }
-        }
-    }
-
-    private fun shellCommandFor(agentCommand: String): Array<String> {
-        val isWindows = System.getProperty("os.name").lowercase().contains("win")
-        return if (isWindows) {
-            val shell = System.getenv("COMSPEC") ?: "cmd.exe"
-            arrayOf(shell, "/c", agentCommand)
-        } else {
-            val shell = System.getenv("SHELL") ?: "/bin/sh"
-            arrayOf(shell, "-l", "-i", "-c", "exec $agentCommand")
-        }
+        terminal.start()
     }
 
     private fun switchToSession(session: AgentCliSession) {
-        if (terminalPanels.containsKey(session.id)) {
+        if (session.isEditorHosted) {
+            val agentSessionId = session.agentSessionId ?: return
+            val file = AgentCliSessionVirtualFile(session.agentType, agentSessionId, session.displayName)
+            FileEditorManager.getInstance(project).openFile(file, true)
+            return
+        }
+        val terminal = terminals[session.id]
+        if (terminal != null) {
             // Disable resize on old active terminal, enable on new one
-            activeSessionId?.let { terminalPanels[it]?.setResizeEnabled(false) }
+            activeSessionId?.let { terminals[it]?.setResizeEnabled(false) }
             activeSessionId = session.id
-            terminalPanels[session.id]?.setResizeEnabled(true)
+            terminal.setResizeEnabled(true)
 
             terminalCardLayout.show(terminalPanel, session.id)
             sidebar.selectSession(session)
-            terminalPanels[session.id]?.focus()
+            terminal.focus()
             attentionService.clearByPluginSessionId(session.id)
             updateToolWindowTitle()
         } else {
-            LOG.warn("[AgentCLI] switchToSession: no terminal panel found for session ${session.id}")
+            LOG.warn("[AgentCLI] switchToSession: no terminal found for session ${session.id}")
         }
     }
 
     private fun closeSession(session: AgentCliSession) {
-        val cefPanel = terminalPanels.remove(session.id)
-        val ptyBridge = ptyBridges.remove(session.id)
+        if (session.isEditorHosted) {
+            val agentSessionId = session.agentSessionId ?: return
+            val file = AgentCliSessionVirtualFile(session.agentType, agentSessionId, session.displayName)
+            // Closing the editor triggers AgentCliSessionFileEditor.dispose(), which
+            // calls SessionManager.removeSession and fires SESSION_LIFECYCLE_TOPIC,
+            // which removes the row from the sidebar's active list.
+            FileEditorManager.getInstance(project).closeFile(file)
+            return
+        }
+        val terminal = terminals.remove(session.id)
         val closedActiveSession = session.id == activeSessionId
 
-        if (cefPanel != null) {
+        if (terminal != null) {
             // Stop debounced resize → fitAndRestore on this panel before dispose. Cannot use
-            // terminalPanels[activeSessionId] here — the closing session was already removed from the map.
-            cefPanel.setResizeEnabled(false)
+            // terminals[activeSessionId] here — the closing session was already removed from the map.
+            terminal.setResizeEnabled(false)
 
             // CardLayout: show a different card before remove() so removing a card does not reshuffle the visible panel.
             if (closedActiveSession) {
-                val remainingId = terminalPanels.keys.firstOrNull()
+                val remainingId = terminals.keys.firstOrNull()
                 if (remainingId != null) {
                     activeSessionId = remainingId
-                    terminalPanels[remainingId]?.setResizeEnabled(true)
+                    terminals[remainingId]?.setResizeEnabled(true)
                     terminalCardLayout.show(terminalPanel, remainingId)
                 } else {
                     activeSessionId = null
@@ -270,17 +289,14 @@ class AgentCliPanel(
                 }
             }
 
-            cefPanel.component.isVisible = false
+            terminal.component.isVisible = false
 
             // Remove from hierarchy while this card is not shown, then dispose after detach.
-            terminalPanel.remove(cefPanel.component)
+            terminalPanel.remove(terminal.component)
             terminalPanel.revalidate()
             terminalPanel.repaint()
 
-            Disposer.dispose(cefPanel)
-        }
-        if (ptyBridge != null) {
-            Disposer.dispose(ptyBridge)
+            Disposer.dispose(terminal.cefPanel)
         }
 
         sessionManager.removeSession(session)
@@ -302,7 +318,7 @@ class AgentCliPanel(
         }
     }
 
-    private fun deleteHistorySession(historicalSession: org.sajith.agentcli.plugin.session.HistoricalSession) {
+    private fun deleteHistorySession(historicalSession: HistoricalSession) {
         val projectPath = project.basePath ?: return
         ApplicationManager.getApplication().executeOnPooledThread {
             SessionHistoryDeleter.deleteSession(

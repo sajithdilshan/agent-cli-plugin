@@ -12,6 +12,7 @@ data class AgentCliSession(
     val agentSessionId: String? = null,
     @Transient var needsAttention: Boolean = false,
     @Transient var attentionMessage: String? = null,
+    @Transient var isEditorHosted: Boolean = false,
 ) {
     val displayName: String
         get() = name
