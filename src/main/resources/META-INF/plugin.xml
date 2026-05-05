@@ -5,21 +5,27 @@
     <vendor>Sajith Edirisinghe</vendor>
 
     <description><![CDATA[
-    <p>Run AI coding agents directly inside your JetBrains IDE with a fully embedded terminal and session management.</p>
+    <p>Run AI coding agents directly inside your JetBrains IDE with a fully embedded terminal and session management, either in the tool window or in regular editor tabs.</p>
     <ul>
         <li>Support for Claude Code, Cursor Agent, OpenAI Codex and Gemini CLI — start a session for any enabled agent from the + menu.</li>
         <li>Multiple simultaneous sessions — create, switch, close, and delete sessions. Sessions auto-close when the agent process exits.</li>
-        <li>Session history — browse past sessions grouped by date (Today, Yesterday, This Week, Older), preview first messages, and resume previous sessions by ID where local agent data is available.</li>
+        <li>Session history — browse past sessions grouped by date (Today, Yesterday, This Week, Older) and resume previous sessions by ID where local agent data is available.</li>
+        <li>Editor-hosted sessions — right-click any active or historical session and pick "Open in Code Editor" to move it into a regular editor tab; a "Return to plugin view" link moves it back. Optional settings let new sessions and/or resumed historical sessions always open as editor tabs by default.</li>
         <li>Attention notifications — when an agent needs your input (permission prompts, idle confirmations, Codex permission requests), the session row shows a red dot instead of the green play icon and an IDE balloon (with OS banner) fires. Opt-in: install hooks from Settings with a one-click action that merges idempotently into Claude / Gemini / Codex config files, with .bak backups and clean uninstall.</li>
-        <li>High-performance embedded terminal — xterm.js-based with watermark flow control, clickable URL detection, UTF-8 encoding, and a 10,000-line scrollback buffer.</li>
+        <li>High-performance embedded terminal — xterm.js-based with optional watermark flow control, clickable URL detection, UTF-8 encoding, and a 10,000-line scrollback buffer.</li>
         <li>Theme-aware UI — terminal colors and scrollbars follow the IDE look-and-feel and update dynamically when the theme changes.</li>
-        <li>Compact session sidebar — collapsible panel showing active sessions and browsable history with right-click context menus.</li>
-        <li>Per-agent configuration (Settings → Tools → Agent CLI) — enable or disable each agent, customize launch commands, and adjust terminal font size.</li>
+        <li>Compact session sidebar — collapsible panel showing active sessions and browsable history with right-click context menus. A red overlay dot on the collapse toggle keeps attention-needed state visible when the sidebar is collapsed.</li>
+        <li>Per-agent configuration (Settings → Tools → Agent CLI) — enable or disable each agent, customize launch commands, adjust terminal font size, toggle flow control, and choose where new or resumed sessions open.</li>
     </ul>
     <p><em>Note: A JetBrains Runtime with JCEF is required for the embedded terminal. Install and sign in to each agent CLI you use separately.</em></p>
     ]]></description>
 
     <change-notes><![CDATA[
+    <h3>0.8.1</h3>
+    <ul>
+        <li>Added an "Always resume historical sessions in code editor" setting — when enabled, double-clicking a session in history resumes it as an editor tab instead of in the tool window; the right-click menu then offers "Open in Plugin View" as the override.</li>
+        <li>Added a custom monochrome robot icon (same as the tool window icon) next to the filename on editor tabs hosting an agent session.</li>
+    </ul>
     <h3>0.8.0</h3>
     <ul>
         <li>Added an editor-hosted session view — right-click any active or historical session and pick "Open in Code Editor" to move it into a regular editor tab; a "Return to plugin view" link moves it back. Closing the editor tab closes the session.</li>
