@@ -46,6 +46,7 @@ class SessionSidebarPanel(
     private val onHistorySessionDeleted: (HistoricalSession) -> Unit,
     private val onOpenSessionInEditor: (AgentCliSession) -> Unit,
     private val onOpenHistorySessionInEditor: (HistoricalSession) -> Unit,
+    private val onResumeHistorySessionInPluginView: (HistoricalSession) -> Unit,
 ) : JPanel(BorderLayout()), Disposable {
     private val activeSessionListModel = DefaultListModel<AgentCliSession>()
     private val activeSessionList = JBList(activeSessionListModel)
@@ -346,19 +347,35 @@ class SessionSidebarPanel(
         historyList.selectedIndex = index
         val session = item.session
 
+        val resumesInEditorByDefault = AgentCliSettings.getInstance().alwaysResumeSessionInEditor
         val group =
             DefaultActionGroup().apply {
-                add(
-                    object : AnAction(
-                        "Open in Code Editor",
-                        "Resume this session in an editor tab",
-                        AllIcons.Actions.MoveToWindow,
-                    ) {
-                        override fun actionPerformed(e: AnActionEvent) {
-                            onOpenHistorySessionInEditor(session)
-                        }
-                    },
-                )
+                if (resumesInEditorByDefault) {
+                    add(
+                        object : AnAction(
+                            "Open in Plugin View",
+                            "Resume this session in the tool window",
+                            AllIcons.Actions.MoveToWindow,
+                        ) {
+                            override fun actionPerformed(e: AnActionEvent) {
+                                onResumeHistorySessionInPluginView(session)
+                                loadHistory()
+                            }
+                        },
+                    )
+                } else {
+                    add(
+                        object : AnAction(
+                            "Open in Code Editor",
+                            "Resume this session in an editor tab",
+                            AllIcons.Actions.MoveToWindow,
+                        ) {
+                            override fun actionPerformed(e: AnActionEvent) {
+                                onOpenHistorySessionInEditor(session)
+                            }
+                        },
+                    )
+                }
                 add(
                     object : AnAction("Delete Session", "Delete session history", AllIcons.Actions.GC) {
                         override fun actionPerformed(e: AnActionEvent) {

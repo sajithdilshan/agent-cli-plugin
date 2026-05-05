@@ -51,6 +51,13 @@ class AgentCliPanel(
             onHistorySessionDeleted = { historicalSession -> deleteHistorySession(historicalSession) },
             onOpenSessionInEditor = { session -> openSessionInEditor(session) },
             onOpenHistorySessionInEditor = { historicalSession -> openHistorySessionInEditor(historicalSession) },
+            onResumeHistorySessionInPluginView = { historicalSession ->
+                resumeSessionInPluginView(
+                    historicalSession.agentType,
+                    historicalSession.sessionId,
+                    historicalSession.displayName,
+                )
+            },
         )
 
     private val splitter = OnePixelSplitter(false, 0.2f)
@@ -95,7 +102,7 @@ class AgentCliPanel(
                 AgentCliEditorBridge.RESUME_IN_PLUGIN_TOPIC,
                 AgentCliEditorBridge.ResumeInPluginListener { agentType, sessionId, displayName ->
                     toolWindow.activate(null)
-                    resumeSession(agentType, sessionId, displayName)
+                    resumeSessionInPluginView(agentType, sessionId, displayName)
                 },
             )
 
@@ -179,6 +186,18 @@ class AgentCliPanel(
     }
 
     private fun resumeSession(
+        agentType: AgentType,
+        sessionId: String,
+        title: String?,
+    ) {
+        if (AgentCliSettings.getInstance().alwaysResumeSessionInEditor) {
+            AgentCliEditorBridge.getInstance(project).openInEditor(agentType, sessionId, title ?: sessionId)
+            return
+        }
+        resumeSessionInPluginView(agentType, sessionId, title)
+    }
+
+    private fun resumeSessionInPluginView(
         agentType: AgentType,
         sessionId: String,
         title: String?,

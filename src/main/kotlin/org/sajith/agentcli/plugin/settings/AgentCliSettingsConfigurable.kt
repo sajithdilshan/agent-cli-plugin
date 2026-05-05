@@ -255,8 +255,15 @@ class AgentCliSettingsConfigurable : BoundSearchableConfigurable(
                     checkBox("Always open new sessions in code editor")
                         .bindSelected(settings::alwaysOpenNewSessionInEditor)
                         .comment(
-                            "When enabled, new sessions open as editor tabs instead of in the tool window. " +
-                                    "Resuming from history still honors this setting.",
+                            "When enabled, new sessions open as editor tabs instead of in the tool window.",
+                        )
+                }
+                row {
+                    checkBox("Always resume historical sessions in code editor")
+                        .bindSelected(settings::alwaysResumeSessionInEditor)
+                        .comment(
+                            "When enabled, double-clicking a session in history opens it as an editor tab; " +
+                                    "the right-click menu then offers \"Open in Plugin View\" instead.",
                         )
                 }
             }

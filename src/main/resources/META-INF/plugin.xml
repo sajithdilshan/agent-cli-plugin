@@ -53,6 +53,8 @@
 
         <fileEditorProvider implementation="org.sajith.agentcli.plugin.editor.AgentCliSessionFileEditorProvider"/>
 
+        <fileIconProvider implementation="org.sajith.agentcli.plugin.editor.AgentCliSessionFileIconProvider"/>
+
         <notificationGroup id="Agent CLI Attention"
                            displayType="BALLOON"
                            isLogByDefault="false"

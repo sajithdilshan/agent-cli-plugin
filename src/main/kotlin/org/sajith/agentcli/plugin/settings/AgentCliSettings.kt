@@ -26,6 +26,7 @@ class AgentCliSettings : PersistentStateComponent<AgentCliSettings.State> {
         var terminalFontSize: Int = 13,
         var flowControlEnabled: Boolean = false,
         var alwaysOpenNewSessionInEditor: Boolean = false,
+        var alwaysResumeSessionInEditor: Boolean = false,
     )
 
     private var state = State()
@@ -111,6 +112,12 @@ class AgentCliSettings : PersistentStateComponent<AgentCliSettings.State> {
         get() = state.alwaysOpenNewSessionInEditor
         set(value) {
             state.alwaysOpenNewSessionInEditor = value
+        }
+
+    var alwaysResumeSessionInEditor: Boolean
+        get() = state.alwaysResumeSessionInEditor
+        set(value) {
+            state.alwaysResumeSessionInEditor = value
         }
 
     fun interface SettingsChangeListener {
