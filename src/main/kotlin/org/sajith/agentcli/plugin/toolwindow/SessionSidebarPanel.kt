@@ -256,6 +256,11 @@ class SessionSidebarPanel(
                             val relativeX = e.x - cellBounds.x
                             if (relativeX >= cellBounds.width - JBUI.scale(24)) {
                                 onSessionClosed(activeSessionListModel.getElementAt(index))
+                            } else {
+                                val session = activeSessionListModel.getElementAt(index)
+                                if (session == selectedSession) {
+                                    onSessionSelected(session)
+                                }
                             }
                         }
                     }
