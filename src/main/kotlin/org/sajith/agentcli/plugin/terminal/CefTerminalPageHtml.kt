@@ -325,8 +325,22 @@ internal fun buildCefTerminalPageHtml(
             return bytes;
         }
 
+        // xterm.js batches renders via requestAnimationFrame. For interactive prompts
+        // (rapid cursor movement + line clearing + redraw), the final frame sometimes
+        // doesn't paint. Force a refresh after writes settle to ensure the last state
+        // is always visible. The debounce keeps this cheap during rapid output.
+        var writeRefreshTimer = null;
+        function scheduleWriteRefresh() {
+            if (writeRefreshTimer) { clearTimeout(writeRefreshTimer); }
+            writeRefreshTimer = setTimeout(function() {
+                writeRefreshTimer = null;
+                term.refresh(0, term.rows - 1);
+            }, 50);
+        }
+
         function onWriteComplete() {
             scheduleDismissOverlay();
+            scheduleWriteRefresh();
             if (Date.now() < postResizeScrollDeadline) {
                 if (postResizeSettleTimer) { clearTimeout(postResizeSettleTimer); }
                 postResizeSettleTimer = setTimeout(function() {
