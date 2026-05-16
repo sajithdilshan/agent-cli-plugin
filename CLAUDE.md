@@ -4,20 +4,20 @@
 
 **Agent CLI** is a JetBrains IntelliJ Platform plugin that runs AI agent CLI sessions (Claude Code, Cursor, Gemini CLI, OpenAI Codex) inside the IDE with a fully embedded xterm.js terminal backed by a PTY process.
 
-- Plugin ID: `org.sajith.agentcli.plugin`
-- Version: `0.8.1` (defined in `gradle.properties`)
-- Author: Sajith Edirisinghe
-- License: Apache 2.0
+* Plugin ID: `org.sajith.agentcli.plugin`
+* Version: `0.8.2` (defined in `gradle.properties`)
+* Author: Sajith Edirisinghe
+* License: Apache 2.0
 
 ## Tech Stack
 
-- **Language:** Kotlin (JVM 17)
-- **Build:** Gradle with Kotlin DSL (`build.gradle.kts`)
-- **Platform:** IntelliJ Platform SDK (2026.1, builds 261–263.*)
-- **Terminal:** xterm.js rendered in JCEF (JBCefBrowser)
-- **PTY:** pty4j library
-- **Linting:** ktlint via `org.jlleitschuh.gradle.ktlint` plugin
-- **Testing:** JUnit 5
+* **Language:** Kotlin (JVM 17)
+* **Build:** Gradle with Kotlin DSL (`build.gradle.kts`)
+* **Platform:** IntelliJ Platform SDK (2026.1, builds 261–263.\*)
+* **Terminal:** xterm.js rendered in JCEF (JBCefBrowser)
+* **PTY:** pty4j library
+* **Linting:** ktlint via `org.jlleitschuh.gradle.ktlint` plugin
+* **Testing:** JUnit 5
 
 ## Build & Run
 
@@ -86,51 +86,58 @@ src/test/kotlin/                  # Unit tests (JUnit 5)
 ## Architecture Notes
 
 ### Terminal Rendering
+
 The terminal uses JCEF (Chromium Embedded Framework) to host an xterm.js instance. Communication between JVM and JS is via `JBCefJSQuery` bridges:
-- **Input:** JS → JVM (base64-encoded keystrokes)
-- **Resize:** JS → JVM (cols/rows JSON)
-- **Output:** JVM → JS (base64-encoded PTY data via `executeJavaScript`)
-- **Ack:** JS → JVM (flow control acknowledgment)
-- **Links:** JS → JVM (URL opened in system browser)
+
+* **Input:** JS → JVM (base64-encoded keystrokes)
+* **Resize:** JS → JVM (cols/rows JSON)
+* **Output:** JVM → JS (base64-encoded PTY data via `executeJavaScript`)
+* **Ack:** JS → JVM (flow control acknowledgment)
+* **Links:** JS → JVM (URL opened in system browser)
 
 ### Flow Control
+
 `TerminalFlowController` implements watermark-based backpressure:
-- Every N bytes (`callbackByteLimit`, default 200KB), a write is flagged for ack
-- When pending un-acked callbacks exceed `highWatermark`, PTY reader is paused
-- When pending drops below `lowWatermark`, PTY reader resumes
-- Disabled by default; toggled via settings
+
+* Every N bytes (`callbackByteLimit`, default 200KB), a write is flagged for ack
+* When pending un-acked callbacks exceed `highWatermark`, PTY reader is paused
+* When pending drops below `lowWatermark`, PTY reader resumes
+* Disabled by default; toggled via settings
 
 ### Session Management
-- `SessionManager` is a project-level service tracking active sessions
-- Communication between components uses IntelliJ `messageBus` topics:
-  - `SESSION_LIFECYCLE_TOPIC` — session added/removed
-  - `SESSION_ATTENTION_TOPIC` — attention state changed
-  - `RESUME_IN_PLUGIN_TOPIC` — editor→plugin view transition
-  - `SETTINGS_CHANGED_TOPIC` — settings updates
+
+* `SessionManager` is a project-level service tracking active sessions
+* Communication between components uses IntelliJ `messageBus` topics:
+    * `SESSION_LIFECYCLE_TOPIC` — session added/removed
+    * `SESSION_ATTENTION_TOPIC` — attention state changed
+    * `RESUME_IN_PLUGIN_TOPIC` — editor→plugin view transition
+    * `SETTINGS_CHANGED_TOPIC` — settings updates
 
 ### Attention Notifications
-- A bundled shell script is installed into agent config files (Claude, Gemini, Codex)
-- The script POSTs to the IDE's built-in HTTP server at `/agent-cli-plugin/notify`
-- `AgentCliNotifyHandler` receives the POST and triggers IDE balloon + OS notification
-- Hook entries carry a sentinel tag for idempotent install/uninstall
+
+* A bundled shell script is installed into agent config files (Claude, Gemini, Codex)
+* The script POSTs to the IDE's built-in HTTP server at `/agent-cli-plugin/notify`
+* `AgentCliNotifyHandler` receives the POST and triggers IDE balloon + OS notification
+* Hook entries carry a sentinel tag for idempotent install/uninstall
 
 ### Editor-Hosted Sessions
+
 Sessions can live in either the tool window or a regular editor tab. Transitions are clean close+resume cycles coordinated through `AgentCliEditorBridge`.
 
 ## Key Conventions
 
-- All log messages are prefixed with `[AgentCLI]`
-- IntelliJ services use `@Service` annotations (APP level for settings, PROJECT level for session manager)
-- Disposable hierarchy: parent disposable → terminal panel → PTY bridge
-- Thread safety: PTY reader is a daemon thread; flow controller uses atomics; JCEF callbacks arrive on the CEF thread
-- Resources (xterm.js, fonts) are loaded lazily once and cached in a companion object
+* All log messages are prefixed with `[AgentCLI]`
+* IntelliJ services use `@Service` annotations (APP level for settings, PROJECT level for session manager)
+* Disposable hierarchy: parent disposable → terminal panel → PTY bridge
+* Thread safety: PTY reader is a daemon thread; flow controller uses atomics; JCEF callbacks arrive on the CEF thread
+* Resources (xterm.js, fonts) are loaded lazily once and cached in a companion object
 
 ## Configuration Files
 
-- `gradle.properties` — plugin version, platform version, build range
-- `build.gradle.kts` — dependencies, signing config, JVM toolchain
-- `local.properties` — machine-local signing credentials (gitignored)
-- `src/main/resources/META-INF/plugin.xml` — plugin descriptor
+* `gradle.properties` — plugin version, platform version, build range
+* `build.gradle.kts` — dependencies, signing config, JVM toolchain
+* `local.properties` — machine-local signing credentials (gitignored)
+* `src/main/resources/META-INF/plugin.xml` — plugin descriptor
 
 ## Adding a New Agent
 

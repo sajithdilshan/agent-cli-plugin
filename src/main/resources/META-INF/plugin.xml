@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>org.sajith.agentcli.plugin</id>
     <name>Agent CLI</name>
-    <version>0.8.1</version>
+    <version>0.8.2</version>
     <vendor>Sajith Edirisinghe</vendor>
 
     <description><![CDATA[
@@ -21,16 +21,16 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <h3>0.8.2</h3>
+    <ul>
+        <li>Fixed IDE title bar showing the internal URI path instead of the session display name when a session is hosted in an editor tab.</li>
+        <li>Fixed clicking an already-selected session in the sidebar not bringing its editor tab to focus.</li>
+        <li>Fixed xterm.js rendering issue where the final frame of interactive prompts sometimes didn't paint (debounced refresh after writes settle).</li>
+    </ul>
     <h3>0.8.1</h3>
     <ul>
         <li>Added an "Always resume historical sessions in code editor" setting — when enabled, double-clicking a session in history resumes it as an editor tab instead of in the tool window; the right-click menu then offers "Open in Plugin View" as the override.</li>
         <li>Added a custom monochrome robot icon (same as the tool window icon) next to the filename on editor tabs hosting an agent session.</li>
-    </ul>
-    <h3>0.8.0</h3>
-    <ul>
-        <li>Added an editor-hosted session view — right-click any active or historical session and pick "Open in Code Editor" to move it into a regular editor tab; a "Return to plugin view" link moves it back. Closing the editor tab closes the session.</li>
-        <li>Added an "Always open new sessions in code editor" setting so new sessions can launch directly as editor tabs instead of in the tool window.</li>
-        <li>Added a red overlay dot on the sidebar collapse/expand toggle so attention-needed state stays visible when the session list is collapsed.</li>
     </ul>
     <p>Full changelogs can be found at <a href="https://github.com/sajithdilshan/agent-cli-plugin/tree/main/changelog">https://github.com/sajithdilshan/agent-cli-plugin/tree/main/changelog</a></p>
     ]]></change-notes>
