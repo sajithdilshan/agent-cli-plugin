@@ -11,6 +11,8 @@ Install one or more supported CLIs on your machine, then complete their login/au
 * Gemini CLI (`gemini`)
 * OpenAI Codex CLI (`codex`)
 
+You can also run any of these through a wrapper command via the **Sandbox** agent type — see [step 7](#7-configure-the-sandbox-agent-optional).
+
 The plugin sends your configured command into a shell session, so the command must be runnable from your shell environment.
 
 ## 2) Verify commands work in your shell
@@ -51,7 +53,7 @@ Notes:
 Open the `Agent CLI` tool window.
 
 * Click `+` in the left icon strip.
-* Choose `Claude`, `Cursor`, `Gemini`, or `Codex`.
+* Choose `Claude`, `Cursor`, `Gemini`, `Codex`, or `Sandbox`.
 * A terminal tab opens and runs the configured command in the current project directory.
 
 ## 5) Resume a previous session (optional)
@@ -82,6 +84,23 @@ For the OS banner to actually appear:
 
 * macOS: System Settings -> Notifications -> your IDE -> set style to `Banners` or `Alerts` and allow while the app is in the background. Sound is controlled by the per-app "Play sound for notifications" toggle in that same pane.
 * Windows / Linux: the plugin uses the IDE's `SystemNotifications` bridge, which routes to Windows toasts and `libnotify` respectively. No extra setup unless your OS blocks notifications for the IDE.
+
+## 7) Configure the Sandbox agent (optional)
+
+The **Sandbox** agent type runs an agent CLI through a generic wrapper command — for example a containerized runner that isolates the agent to the mounted project directory.
+
+Open `Settings` -> `Tools` -> `Agent CLI` -> `Sandbox` and set:
+
+* `Command` — the wrapper command. Use `{dir}` where the project path should go (inserted quoted); if omitted, the path is appended. Example: `claude-crate --workdir {dir}`
+* `History dir` — base directory where the sandbox stores history (e.g. `~/.claude-crate`).
+* `Runs as` — the agent running inside the sandbox (Claude / Cursor / Gemini / Codex). This selects the history parser and resume syntax.
+* `Enable` — toggles the Sandbox entry in the `+` menu.
+
+Then start a session from the `+` menu just like any other agent. New sessions run `<command>` with `{dir}` substituted; resuming runs the same with the underlying agent's resume flag appended (e.g. `claude-crate --workdir "<project>" --resume <sessionId>`), so the wrapper must forward trailing arguments to the underlying CLI.
+
+Sandbox sessions show a green gradient bar at the top of the terminal so you can tell them apart at a glance.
+
+A concrete example wrapper is [claude-crate](https://github.com/sajithdilshan/claude-crate), which runs Claude Code in a Docker container. With it installed, use `claude-crate --workdir {dir}`, history dir `~/.claude-crate`, and `Runs as` = `Claude`.
 
 ## Troubleshooting
 

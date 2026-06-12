@@ -6,6 +6,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import org.jetbrains.ide.BuiltInServerManager
+import org.sajith.agentcli.plugin.AgentType
 import org.sajith.agentcli.plugin.notify.SessionAttentionService
 import org.sajith.agentcli.plugin.session.AgentCliSession
 import org.sajith.agentcli.plugin.settings.AgentCliSettings
@@ -48,6 +49,7 @@ class EmbeddedAgentTerminal(
                 onResize = { cols, rows -> ptyBridgeRef.resize(cols, rows) },
                 onAck = { flowControllerRef.ack() },
                 loadingText = if (isResume) "Resuming Session..." else "Starting Session...",
+                sandbox = session.agentType == AgentType.SANDBOX,
             )
 
         val flowControlEnabled = AgentCliSettings.getInstance().flowControlEnabled

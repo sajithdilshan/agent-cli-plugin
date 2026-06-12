@@ -9,8 +9,10 @@ import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.options.BoundSearchableConfigurable
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.Messages
+import com.intellij.ui.SimpleListCellRenderer
 import com.intellij.ui.components.JBTabbedPane
 import com.intellij.ui.dsl.builder.*
+import org.sajith.agentcli.plugin.AgentType
 import org.sajith.agentcli.plugin.notify.HookInstaller
 import java.awt.BorderLayout
 import java.awt.Dimension
@@ -158,6 +160,40 @@ class AgentCliSettingsConfigurable : BoundSearchableConfigurable(
                     cmdField.enabledIf(codexCheckbox.selected)
                 }
             }
+            lateinit var sandboxCheckbox: Cell<JCheckBox>
+            group("Sandbox") {
+                row("Command:") {
+                    textField()
+                        .columns(30)
+                        .bindText(settings::sandboxCommand)
+                        .comment(
+                            "Command to launch the sandboxed agent. Use {dir} where the project path " +
+                                "should be inserted (e.g. claude-crate --workdir {dir}); if omitted it is appended.",
+                        )
+                }
+                row("History dir:") {
+                    textField()
+                        .columns(30)
+                        .bindText(settings::sandboxHistoryDir)
+                        .comment("Base dir where the sandbox stores agent history (e.g. ~/.claude-crate)")
+                }
+                row("Runs as:") {
+                    comboBox(
+                        AgentType.entries.filter { it != AgentType.SANDBOX },
+                        SimpleListCellRenderer.create("") { it.displayName },
+                    )
+                        .bindItem(
+                            { settings.sandboxUnderlyingAgent },
+                            { settings.sandboxUnderlyingAgent = it ?: AgentType.CLAUDE },
+                        )
+                        .comment("The agent running inside the sandbox — selects history parsing and resume syntax")
+                }
+                row {
+                    sandboxCheckbox =
+                        checkBox("Enable")
+                            .bindSelected(settings::sandboxEnabled)
+                }
+            }
             group("Attention Notifications") {
                 row {
                     comment(
@@ -263,7 +299,7 @@ class AgentCliSettingsConfigurable : BoundSearchableConfigurable(
                         .bindSelected(settings::alwaysResumeSessionInEditor)
                         .comment(
                             "When enabled, double-clicking a session in history opens it as an editor tab; " +
-                                    "the right-click menu then offers \"Open in Plugin View\" instead.",
+                                "the right-click menu then offers \"Open in Plugin View\" instead.",
                         )
                 }
             }

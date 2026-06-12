@@ -24,6 +24,18 @@ internal object SessionPathResolver {
         return if (flat.length >= 2 && flat[1] == ':') flat[0].lowercaseChar() + flat.substring(1) else flat
     }
 
+    /** Expands a leading `~` or `~/` to the user's home directory. */
+    fun expandHome(path: String): File {
+        val home = System.getProperty("user.home")
+        val expanded =
+            when {
+                path == "~" -> home
+                path.startsWith("~/") || path.startsWith("~\\") -> home + path.substring(1)
+                else -> path
+            }
+        return File(expanded)
+    }
+
     fun encodeClaudeProjectPath(projectPath: String): String = normalizePath(projectPath).replace("/", "-")
 
     fun encodeCursorProjectPath(projectPath: String): String = normalizePath(projectPath).replace("/", "-").removePrefix("-")

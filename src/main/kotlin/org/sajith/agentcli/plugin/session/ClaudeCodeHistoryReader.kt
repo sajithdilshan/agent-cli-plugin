@@ -11,8 +11,11 @@ import java.io.StringReader
 object ClaudeCodeHistoryReader {
     private val LOG = Logger.getInstance(ClaudeCodeHistoryReader::class.java)
 
-    fun readHistory(projectPath: String): List<HistoricalSession> {
-        val claudeDir = File(System.getProperty("user.home"), ".claude/projects")
+    fun readHistory(
+        projectPath: String,
+        agentHome: File? = null,
+    ): List<HistoricalSession> {
+        val claudeDir = (agentHome ?: File(System.getProperty("user.home"), ".claude")).resolve("projects")
         if (!claudeDir.exists()) return emptyList()
 
         val encodedPath = SessionPathResolver.encodeClaudeProjectPath(projectPath)

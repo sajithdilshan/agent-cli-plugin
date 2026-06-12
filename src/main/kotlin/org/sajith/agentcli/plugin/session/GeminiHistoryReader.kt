@@ -11,8 +11,11 @@ import java.time.ZoneId
 object GeminiHistoryReader {
     private val LOG = Logger.getInstance(GeminiHistoryReader::class.java)
 
-    fun readHistory(projectPath: String): List<HistoricalSession> {
-        val geminiDir = File(System.getProperty("user.home"), ".gemini")
+    fun readHistory(
+        projectPath: String,
+        agentHome: File? = null,
+    ): List<HistoricalSession> {
+        val geminiDir = agentHome ?: File(System.getProperty("user.home"), ".gemini")
         if (!geminiDir.exists()) return emptyList()
 
         val projectName = SessionPathResolver.resolveGeminiProjectName(geminiDir, projectPath) ?: return emptyList()

@@ -5,4 +5,5 @@ enum class AgentType(val displayName: String) {
     CURSOR("Cursor"),
     GEMINI("Gemini"),
     CODEX("Codex"),
+    SANDBOX("Sandbox"),
 }

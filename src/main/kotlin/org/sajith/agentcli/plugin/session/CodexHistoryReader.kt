@@ -19,8 +19,11 @@ object CodexHistoryReader {
         val updatedAt: String?,
     )
 
-    fun readHistory(projectPath: String): List<HistoricalSession> {
-        val codexDir = File(System.getProperty("user.home"), ".codex")
+    fun readHistory(
+        projectPath: String,
+        agentHome: File? = null,
+    ): List<HistoricalSession> {
+        val codexDir = agentHome ?: File(System.getProperty("user.home"), ".codex")
         if (!codexDir.exists()) return emptyList()
 
         val sessionsDir = codexDir.resolve("sessions")
@@ -261,8 +264,11 @@ object CodexHistoryReader {
     /**
      * Finds the session file for a given session ID by scanning ~/.codex/sessions/ recursively.
      */
-    fun findSessionFile(sessionId: String): File? {
-        val sessionsDir = File(System.getProperty("user.home"), ".codex/sessions")
+    fun findSessionFile(
+        sessionId: String,
+        codexDir: File = File(System.getProperty("user.home"), ".codex"),
+    ): File? {
+        val sessionsDir = codexDir.resolve("sessions")
         if (!sessionsDir.exists()) return null
         return sessionsDir.walkTopDown().firstOrNull {
             it.extension == "jsonl" && it.nameWithoutExtension.endsWith(sessionId)
@@ -272,8 +278,11 @@ object CodexHistoryReader {
     /**
      * Removes an entry from session_index.jsonl by session ID.
      */
-    fun removeFromIndex(sessionId: String): Boolean {
-        val indexFile = File(System.getProperty("user.home"), ".codex/session_index.jsonl")
+    fun removeFromIndex(
+        sessionId: String,
+        codexDir: File = File(System.getProperty("user.home"), ".codex"),
+    ): Boolean {
+        val indexFile = codexDir.resolve("session_index.jsonl")
         if (!indexFile.exists()) return false
 
         try {

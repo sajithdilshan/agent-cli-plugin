@@ -54,7 +54,6 @@ class AgentCliEditorBridge(private val project: Project) {
         val RESUME_IN_PLUGIN_TOPIC: Topic<ResumeInPluginListener> =
             Topic.create("AgentCLI.ResumeInPlugin", ResumeInPluginListener::class.java)
 
-        fun getInstance(project: Project): AgentCliEditorBridge =
-            project.getService(AgentCliEditorBridge::class.java)
+        fun getInstance(project: Project): AgentCliEditorBridge = project.getService(AgentCliEditorBridge::class.java)
     }
 }

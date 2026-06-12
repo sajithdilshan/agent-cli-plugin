@@ -39,13 +39,11 @@ class AgentCliSessionVirtualFile private constructor(
             agentType: AgentType,
             agentSessionId: String,
             displayName: String,
-        ): AgentCliSessionVirtualFile =
-            AgentCliSessionVirtualFile(agentType, agentSessionId, agentSessionId, displayName)
+        ): AgentCliSessionVirtualFile = AgentCliSessionVirtualFile(agentType, agentSessionId, agentSessionId, displayName)
 
         fun forNewSession(
             agentType: AgentType,
             displayName: String,
-        ): AgentCliSessionVirtualFile =
-            AgentCliSessionVirtualFile(agentType, null, "new-${UUID.randomUUID()}", displayName)
+        ): AgentCliSessionVirtualFile = AgentCliSessionVirtualFile(agentType, null, "new-${UUID.randomUUID()}", displayName)
     }
 }

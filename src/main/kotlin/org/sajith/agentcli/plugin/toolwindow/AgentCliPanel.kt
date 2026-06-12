@@ -16,10 +16,7 @@ import org.sajith.agentcli.plugin.AgentType
 import org.sajith.agentcli.plugin.editor.AgentCliEditorBridge
 import org.sajith.agentcli.plugin.editor.AgentCliSessionVirtualFile
 import org.sajith.agentcli.plugin.notify.SessionAttentionService
-import org.sajith.agentcli.plugin.session.AgentCliSession
-import org.sajith.agentcli.plugin.session.HistoricalSession
-import org.sajith.agentcli.plugin.session.SessionHistoryDeleter
-import org.sajith.agentcli.plugin.session.SessionManager
+import org.sajith.agentcli.plugin.session.*
 import org.sajith.agentcli.plugin.settings.AgentCliSettings
 import org.sajith.agentcli.plugin.terminal.EmbeddedAgentTerminal
 import java.awt.BorderLayout
@@ -175,7 +172,7 @@ class AgentCliPanel(
             AgentCliEditorBridge.getInstance(project).openNewSessionInEditor(agentType, displayName)
             return
         }
-        val cmd = getCommand(agentType)
+        val cmd = AgentCommandBuilder.newSessionCommand(agentType, projectPathForCommand())
         val session = sessionManager.createSession(agentType = agentType)
         createTerminalForSession(session, cmd)
     }
@@ -202,31 +199,12 @@ class AgentCliPanel(
         sessionId: String,
         title: String?,
     ) {
-        val cmd = getCommand(agentType)
         val session = sessionManager.createSession(title, agentType = agentType, agentSessionId = sessionId)
-        val resumeCmd = resumeCommandFor(agentType, cmd, sessionId)
+        val resumeCmd = AgentCommandBuilder.resumeCommand(agentType, sessionId, projectPathForCommand())
         createTerminalForSession(session, resumeCmd, isResume = true)
     }
 
-    private fun resumeCommandFor(
-        agentType: AgentType,
-        cmd: String,
-        sessionId: String,
-    ): String =
-        when (agentType) {
-            AgentType.CODEX -> "$cmd resume $sessionId"
-            else -> "$cmd --resume $sessionId"
-        }
-
-    private fun getCommand(agentType: AgentType): String {
-        val settings = AgentCliSettings.getInstance()
-        return when (agentType) {
-            AgentType.CLAUDE -> settings.claudeCommand
-            AgentType.CURSOR -> settings.cursorCommand
-            AgentType.GEMINI -> settings.geminiCommand
-            AgentType.CODEX -> settings.codexCommand
-        }
-    }
+    private fun projectPathForCommand(): String = project.basePath ?: System.getProperty("user.home")
 
     private fun createTerminalForSession(
         session: AgentCliSession,

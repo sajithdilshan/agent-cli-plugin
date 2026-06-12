@@ -10,8 +10,11 @@ object CursorHistoryReader {
     private val LOG = Logger.getInstance(CursorHistoryReader::class.java)
     private val USER_QUERY_REGEX = Regex("<user_query>\\s*(.*?)\\s*</user_query>", RegexOption.DOT_MATCHES_ALL)
 
-    fun readHistory(projectPath: String): List<HistoricalSession> {
-        val cursorDir = File(System.getProperty("user.home"), ".cursor/projects")
+    fun readHistory(
+        projectPath: String,
+        agentHome: File? = null,
+    ): List<HistoricalSession> {
+        val cursorDir = (agentHome ?: File(System.getProperty("user.home"), ".cursor")).resolve("projects")
         if (!cursorDir.exists()) return emptyList()
 
         val encodedPath = SessionPathResolver.encodeCursorProjectPath(projectPath)

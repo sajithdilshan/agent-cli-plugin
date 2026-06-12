@@ -17,8 +17,45 @@ internal fun buildCefTerminalPageHtml(
     openLinkQueryJs: String,
     ackQueryJs: String,
     loadingText: String = "Starting Session...",
-): String =
-    """
+    sandbox: Boolean = false,
+): String {
+    val sandboxIndicatorCss =
+        if (sandbox) {
+            """
+            #sandbox-indicator {
+                position: fixed;
+                top: 0; left: 0; right: 0;
+                height: 3px;
+                z-index: 2000;
+                pointer-events: none;
+                background: linear-gradient(
+                    90deg,
+                    #11998e 0%,
+                    #38ef7d 50%,
+                    #11998e 100%
+                );
+                background-size: 200% 100%;
+                animation: sandboxShimmer 6s linear infinite;
+            }
+            body.light-theme #sandbox-indicator {
+                background: linear-gradient(
+                    90deg,
+                    #0a8f5f 0%,
+                    #2ecc71 50%,
+                    #0a8f5f 100%
+                );
+                background-size: 200% 100%;
+            }
+            @keyframes sandboxShimmer {
+                0% { background-position: 0% 50%; }
+                100% { background-position: 200% 50%; }
+            }
+            """
+        } else {
+            ""
+        }
+    val sandboxIndicatorHtml = if (sandbox) "<div id=\"sandbox-indicator\"></div>" else ""
+    return """
     <!DOCTYPE html>
     <html>
     <head>
@@ -192,9 +229,11 @@ internal fun buildCefTerminalPageHtml(
     body.light-theme .xterm-viewport::-webkit-scrollbar-thumb:hover {
         background: rgba(0, 0, 0, 0.35);
     }
+    $sandboxIndicatorCss
     </style>
     </head>
     <body>
+    $sandboxIndicatorHtml
     <div id="loading-overlay">
         <div class="loading-content">
             <div class="robot">
@@ -542,3 +581,4 @@ internal fun buildCefTerminalPageHtml(
     </body>
     </html>
     """.trimIndent()
+}

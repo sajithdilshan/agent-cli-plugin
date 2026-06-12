@@ -12,10 +12,9 @@ import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.ActionLink
 import com.intellij.util.ui.JBUI
-import org.sajith.agentcli.plugin.AgentType
 import org.sajith.agentcli.plugin.session.AgentCliSession
+import org.sajith.agentcli.plugin.session.AgentCommandBuilder
 import org.sajith.agentcli.plugin.session.SessionManager
-import org.sajith.agentcli.plugin.settings.AgentCliSettings
 import org.sajith.agentcli.plugin.terminal.EmbeddedAgentTerminal
 import java.awt.BorderLayout
 import java.awt.Font
@@ -59,14 +58,13 @@ class AgentCliSessionFileEditor(
                 isEditorHosted = true,
             ).also { it.editorFileKey = file.key }
 
-        val baseCmd = getCommand(file.agentType)
+        val workingDir = project.basePath ?: System.getProperty("user.home")
         val command =
             if (file.agentSessionId != null) {
-                resumeCommandFor(file.agentType, baseCmd, file.agentSessionId)
+                AgentCommandBuilder.resumeCommand(file.agentType, file.agentSessionId, workingDir)
             } else {
-                baseCmd
+                AgentCommandBuilder.newSessionCommand(file.agentType, workingDir)
             }
-        val workingDir = project.basePath ?: System.getProperty("user.home")
 
         terminal =
             EmbeddedAgentTerminal(
@@ -125,26 +123,6 @@ class AgentCliSessionFileEditor(
         }
 
         return banner
-    }
-
-    private fun resumeCommandFor(
-        agentType: AgentType,
-        cmd: String,
-        sessionId: String,
-    ): String =
-        when (agentType) {
-            AgentType.CODEX -> "$cmd resume $sessionId"
-            else -> "$cmd --resume $sessionId"
-        }
-
-    private fun getCommand(agentType: AgentType): String {
-        val settings = AgentCliSettings.getInstance()
-        return when (agentType) {
-            AgentType.CLAUDE -> settings.claudeCommand
-            AgentType.CURSOR -> settings.cursorCommand
-            AgentType.GEMINI -> settings.geminiCommand
-            AgentType.CODEX -> settings.codexCommand
-        }
     }
 
     override fun getComponent(): JComponent = rootPanel

@@ -17,7 +17,7 @@ import org.sajith.agentcli.plugin.settings.AgentCliSettings
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.net.URI
-import java.util.Base64
+import java.util.*
 import javax.swing.JComponent
 import javax.swing.Timer
 
@@ -27,6 +27,7 @@ class CefTerminalPanel(
     private val onResize: (cols: Int, rows: Int) -> Unit,
     private val onAck: () -> Unit = {},
     private val loadingText: String = "Starting Session...",
+    private val sandbox: Boolean = false,
 ) : Disposable {
     private val browser: JBCefBrowser = JBCefBrowser()
     private val inputQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
@@ -204,6 +205,7 @@ class CefTerminalPanel(
             openLinkQueryJs = openLinkQueryJs,
             ackQueryJs = ackQueryJs,
             loadingText = loadingText,
+            sandbox = sandbox,
         )
     }
 

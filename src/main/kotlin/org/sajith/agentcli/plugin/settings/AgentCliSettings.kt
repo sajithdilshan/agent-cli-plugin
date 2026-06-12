@@ -23,6 +23,10 @@ class AgentCliSettings : PersistentStateComponent<AgentCliSettings.State> {
         var geminiCommand: String = "gemini",
         var codexEnabled: Boolean = true,
         var codexCommand: String = "codex",
+        var sandboxEnabled: Boolean = false,
+        var sandboxCommand: String = "claude-crate --workdir {dir}",
+        var sandboxHistoryDir: String = "~/.claude-crate",
+        var sandboxUnderlyingAgent: String = AgentType.CLAUDE.name,
         var terminalFontSize: Int = 13,
         var flowControlEnabled: Boolean = false,
         var alwaysOpenNewSessionInEditor: Boolean = false,
@@ -85,12 +89,38 @@ class AgentCliSettings : PersistentStateComponent<AgentCliSettings.State> {
             state.codexCommand = value
         }
 
+    var sandboxEnabled: Boolean
+        get() = state.sandboxEnabled
+        set(value) {
+            state.sandboxEnabled = value
+        }
+
+    var sandboxCommand: String
+        get() = state.sandboxCommand
+        set(value) {
+            state.sandboxCommand = value
+        }
+
+    var sandboxHistoryDir: String
+        get() = state.sandboxHistoryDir
+        set(value) {
+            state.sandboxHistoryDir = value
+        }
+
+    /** The real agent running inside the sandbox; drives history parsing and resume syntax. */
+    var sandboxUnderlyingAgent: AgentType
+        get() = runCatching { AgentType.valueOf(state.sandboxUnderlyingAgent) }.getOrDefault(AgentType.CLAUDE)
+        set(value) {
+            state.sandboxUnderlyingAgent = value.name
+        }
+
     fun isAgentEnabled(agentType: AgentType): Boolean =
         when (agentType) {
             AgentType.CLAUDE -> claudeEnabled
             AgentType.CURSOR -> cursorEnabled
             AgentType.GEMINI -> geminiEnabled
             AgentType.CODEX -> codexEnabled
+            AgentType.SANDBOX -> sandboxEnabled
         }
 
     val enabledAgentTypes: List<AgentType>

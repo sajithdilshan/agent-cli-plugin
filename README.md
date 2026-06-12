@@ -8,6 +8,7 @@ Currently supported agents:
 * **Cursor** — Cursor's CLI agent
 * **Gemini CLI** — Google's terminal-based Gemini agent
 * **OpenAI Codex** — OpenAI's CLI coding agent
+* **Sandbox** — a generic agent type for running any of the above through a wrapper command (e.g. a containerized, sandboxed runner). See [Sandbox agent](#sandbox-agent).
 
 This is an independent, personally-developed project.
 
@@ -33,6 +34,7 @@ No Warranty: This software is provided "as is," without warranty of any kind. Us
     * Cursor — `~/.cursor/projects/…/agent-transcripts/…`
     * Gemini CLI — `~/.gemini` (including `projects.json` and chat JSON under `tmp/<project>/chats`)
     * Codex — `~/.codex/sessions/…`
+    * Sandbox — the configured history directory, parsed using the underlying agent's format (see [Sandbox agent](#sandbox-agent))
 * **Open session in code editor** — right-click any active or historical session in the sidebar and pick **Open in Code Editor** to move the session into a regular editor tab. A **Return to plugin view** link at the top of the tab moves it back to the tool window. Each transition is a clean close + resume, so the sidebar's active-sessions list stays in sync regardless of where the session is displayed; closing the editor tab closes the session.
 * **Attention notifications** — when an agent needs your input (permission prompt, idle confirmation, Codex permission request), the session row shows a red dot instead of the green play icon and an IDE balloon pops up (with an OS banner). Opt-in: install the hooks from **Settings → Tools → Agent CLI → Attention Notifications** and they merge idempotently into `~/.claude/settings.json`, `~/.gemini/settings.json`, and `~/.codex/hooks.json` with `.bak` backups; Uninstall cleanly removes them. Windows is supported via a bundled PowerShell script. Agents launched outside the IDE are a no-op — the hook skips the HTTP call entirely.
 * **High-performance embedded terminal** — xterm.js-based with optional watermark flow control, clickable URL detection, UTF-8 encoding, and a 10,000-line scrollback buffer.
@@ -56,11 +58,14 @@ No Warranty: This software is provided "as is," without warranty of any kind. Us
 
 | Setting | Description |
 | ------- | ----------- |
-| **Enable Claude / Cursor / Gemini / Codex** | Toggles each agent on or off. Disabled agents are hidden from the **+** menu and history list. |
+| **Enable Claude / Cursor / Gemini / Codex / Sandbox** | Toggles each agent on or off. Disabled agents are hidden from the **+** menu and history list. |
 | **Claude command** | Command used to start Claude Code (default: `claude`). |
 | **Cursor command** | Command used to start Cursor agent (default: `agent`). |
 | **Gemini command** | Command used to start Gemini CLI (default: `gemini`). |
 | **Codex command** | Command used to start Codex CLI (default: `codex`). |
+| **Sandbox command** | Command used to start the sandboxed agent. Use `{dir}` where the project path should be inserted (e.g. `claude-crate --workdir {dir}`); if omitted, the path is appended. |
+| **Sandbox history dir** | Base directory where the sandbox stores agent history (e.g. `~/.claude-crate`). |
+| **Sandbox runs as** | The agent running inside the sandbox (Claude / Cursor / Gemini / Codex). Selects which history parser and resume syntax are used. |
 | **Terminal font size** | Font size for the embedded xterm (allowed range as in the settings UI). |
 | **Enable flow control** | Throttle PTY output behind an xterm.js write-ack watermark. Leave off unless fast-output agents cause terminal stuttering. |
 | **Always open new sessions in code editor** | When enabled, new sessions open as regular editor tabs instead of in the tool window. You can still open individual sessions in the editor on demand via the sidebar's right-click menu regardless of this setting. |
@@ -68,6 +73,34 @@ No Warranty: This software is provided "as is," without warranty of any kind. Us
 | **Attention Notifications** | Install / uninstall per-agent hook scripts that notify the IDE when an agent needs attention. |
 
 Persistent settings are stored in the application-level component configured in `plugin.xml`.
+
+## Sandbox agent
+
+The **Sandbox** agent type runs an agent CLI through a generic wrapper command instead of invoking the CLI directly. This is useful when you want the agent to run in an isolated environment — for example, inside a container where it can only touch the mounted project directory.
+
+It is intentionally generic: the plugin doesn't know or care what the wrapper does. You tell it three things in **Settings → Tools → Agent CLI → Sandbox**:
+
+* **Command** — the wrapper command, with `{dir}` marking where the project path goes (it is inserted quoted; if `{dir}` is absent the path is appended).
+* **History dir** — the base directory where the sandboxed agent writes its history (replaces the underlying agent's default home, e.g. `~/.claude-crate` in place of `~/.claude`).
+* **Runs as** — which agent actually runs inside the sandbox. This selects the history parser, project-path encoding, and resume syntax.
+
+Sandbox sessions are visually distinguished by a green gradient bar across the top of the terminal and a matching gradient label in the history list.
+
+### Resuming
+
+Resume reuses the underlying agent's syntax with the project path injected, e.g. `claude-crate --workdir "<project>" --resume <sessionId>`. The wrapper must forward trailing arguments through to the underlying CLI.
+
+### Example: claude-crate
+
+[claude-crate](https://github.com/sajithdilshan/claude-crate) is a containerized, sandboxed runner for Claude Code. To use it:
+
+| Setting | Value |
+| ------- | ----- |
+| **Command** | `claude-crate --workdir {dir}` |
+| **History dir** | `~/.claude-crate` |
+| **Runs as** | `Claude` |
+
+This assumes the wrapper preserves the underlying agent's on-disk history layout under the configured history dir (just rooted at a different path). If a wrapper restructures the transcript layout, the underlying-agent parser won't find its sessions.
 
 ## Development
 
@@ -97,7 +130,7 @@ Platform version is controlled via `gradle.properties` (`platformVersion`); the 
 | ---- | ---- |
 | `src/main/kotlin/.../toolwindow/` | Tool window factory, main panel, session sidebar |
 | `src/main/kotlin/.../terminal/` | JCEF panel, PTY bridge, flow controller, HTML shell, theme JSON |
-| `src/main/kotlin/.../session/` | Session manager, history readers (Claude / Cursor / Gemini / Codex), history deleter |
+| `src/main/kotlin/.../session/` | Session manager, history readers (Claude / Cursor / Gemini / Codex / Sandbox), command builder, history deleter |
 | `src/main/kotlin/.../editor/` | Virtual file + FileEditor for hosting sessions in editor tabs |
 | `src/main/kotlin/.../notify/` | Attention HTTP endpoint, balloon service, hook installer |
 | `src/main/kotlin/.../settings/` | Persistent settings and configurable UI |

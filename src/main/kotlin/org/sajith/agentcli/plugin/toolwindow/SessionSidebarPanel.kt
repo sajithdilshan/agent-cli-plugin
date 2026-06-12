@@ -566,6 +566,7 @@ class SessionSidebarPanel(
                 AgentType.CURSOR -> CursorHistoryReader.readHistory(projectPath)
                 AgentType.GEMINI -> GeminiHistoryReader.readHistory(projectPath)
                 AgentType.CODEX -> CodexHistoryReader.readHistory(projectPath)
+                AgentType.SANDBOX -> SandboxHistoryReader.readHistory(projectPath)
             }.map { it.copy(agentType = agentType) }
         } catch (e: Exception) {
             LOG.warn("Failed to read ${agentType.displayName} history", e)
@@ -745,23 +746,74 @@ class SessionSidebarPanel(
                                 minimumSize = Dimension(0, preferredSize.height)
                             }
 
-                        val metaParts = mutableListOf(session.agentType.displayName)
                         val date = session.timestamp.toLocalDate()
                         val today = LocalDate.now()
-                        if (date != today && date != today.minusDays(1)) {
-                            metaParts.add(session.formattedTime)
-                        }
-                        val metaLabel =
-                            JLabel(metaParts.joinToString("  ·  ")).apply {
-                                foreground = JBColor.GRAY
-                                font = JBUI.Fonts.smallFont()
+                        val showTime = date != today && date != today.minusDays(1)
+                        val metaSuffix =
+                            buildString {
+                                if (showTime) append("  ·  ").append(session.formattedTime)
+                            }
+
+                        val metaComponent: Component =
+                            if (session.agentType == AgentType.SANDBOX) {
+                                JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
+                                    isOpaque = false
+                                    add(GradientLabel(session.agentType.displayName, JBUI.Fonts.smallFont()))
+                                    if (metaSuffix.isNotEmpty()) {
+                                        add(
+                                            JLabel(metaSuffix).apply {
+                                                foreground = JBColor.GRAY
+                                                font = JBUI.Fonts.smallFont()
+                                            },
+                                        )
+                                    }
+                                }
+                            } else {
+                                JLabel(session.agentType.displayName + metaSuffix).apply {
+                                    foreground = JBColor.GRAY
+                                    font = JBUI.Fonts.smallFont()
+                                }
                             }
 
                         add(titleLabel, BorderLayout.CENTER)
-                        add(metaLabel, BorderLayout.SOUTH)
+                        add(metaComponent, BorderLayout.SOUTH)
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Renders text with a horizontal green gradient matching the sandbox terminal indicator.
+     * Theme-aware: brighter greens on dark, deeper greens on light.
+     */
+    private class GradientLabel(text: String, font: Font) : JLabel(text) {
+        init {
+            this.font = font
+            isOpaque = false
+        }
+
+        override fun paintComponent(g: Graphics) {
+            val g2 = g.create() as Graphics2D
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+                val dark = !JBColor.isBright()
+                val start = if (dark) Color(0x11998E) else Color(0x0A8F5F)
+                val end = if (dark) Color(0x38EF7D) else Color(0x2ECC71)
+                g2.paint = GradientPaint(0f, 0f, start, width.toFloat(), 0f, end)
+                g2.font = font
+                val fm = g2.fontMetrics
+                val baseline = (height - fm.height) / 2 + fm.ascent
+                g2.drawString(text, 0, baseline)
+            } finally {
+                g2.dispose()
+            }
+        }
+
+        override fun getPreferredSize(): Dimension {
+            val fm = getFontMetrics(font)
+            return Dimension(fm.stringWidth(text), fm.height)
         }
     }
 
