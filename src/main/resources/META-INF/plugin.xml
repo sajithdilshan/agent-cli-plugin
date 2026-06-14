@@ -21,6 +21,11 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <h3>0.9.1</h3>
+    <ul>
+        <li>Added project-scoped settings (Settings → Tools → Agent CLI → Project), stored in the project's workspace file.</li>
+        <li>Added a "Project args" field for the Sandbox agent — extra arguments substituted into the sandbox command's {project_args} placeholder for that project only (appended if the placeholder is absent).</li>
+    </ul>
     <h3>0.9.0</h3>
     <ul>
         <li>Added a new "Sandbox" agent type that runs any underlying agent CLI through a generic wrapper command (e.g. a containerized, sandboxed runner) — configure the wrapper command (with a {dir} placeholder for the project path), a history directory, and which agent runs inside the sandbox.</li>
