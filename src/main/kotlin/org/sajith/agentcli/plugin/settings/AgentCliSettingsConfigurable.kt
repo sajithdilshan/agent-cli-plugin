@@ -167,8 +167,9 @@ class AgentCliSettingsConfigurable : BoundSearchableConfigurable(
                         .columns(30)
                         .bindText(settings::sandboxCommand)
                         .comment(
-                            "Command to launch the sandboxed agent. Use {dir} where the project path " +
-                                "should be inserted (e.g. claude-crate --workdir {dir}); if omitted it is appended.",
+                            "Command to launch the sandboxed agent. Use {dir} for the project path and " +
+                                "{project_args} for per-project arguments (set under Settings → Tools → Agent CLI → Project). " +
+                                "Example: claude-crate --workdir {dir} {project_args}",
                         )
                 }
                 row("History dir:") {

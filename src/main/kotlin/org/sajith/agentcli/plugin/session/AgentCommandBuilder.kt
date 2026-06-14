@@ -1,6 +1,8 @@
 package org.sajith.agentcli.plugin.session
 
+import com.intellij.openapi.project.Project
 import org.sajith.agentcli.plugin.AgentType
+import org.sajith.agentcli.plugin.settings.AgentCliProjectSettings
 import org.sajith.agentcli.plugin.settings.AgentCliSettings
 
 /**
@@ -13,14 +15,15 @@ import org.sajith.agentcli.plugin.settings.AgentCliSettings
  */
 object AgentCommandBuilder {
     private const val DIR_PLACEHOLDER = "{dir}"
+    private const val PROJECT_ARGS_PLACEHOLDER = "{project_args}"
 
     fun newSessionCommand(
         agentType: AgentType,
-        projectPath: String,
+        project: Project,
     ): String {
         val settings = AgentCliSettings.getInstance()
         return when (agentType) {
-            AgentType.SANDBOX -> substituteDir(settings.sandboxCommand, projectPath)
+            AgentType.SANDBOX -> sandboxBase(settings.sandboxCommand, project)
             else -> baseCommand(agentType)
         }
     }
@@ -28,15 +31,36 @@ object AgentCommandBuilder {
     fun resumeCommand(
         agentType: AgentType,
         sessionId: String,
-        projectPath: String,
+        project: Project,
     ): String {
         if (agentType == AgentType.SANDBOX) {
             val settings = AgentCliSettings.getInstance()
-            val base = substituteDir(settings.sandboxCommand, projectPath)
+            val base = sandboxBase(settings.sandboxCommand, project)
             return appendResume(base, settings.sandboxUnderlyingAgent, sessionId)
         }
         return appendResume(baseCommand(agentType), agentType, sessionId)
     }
+
+    private fun sandboxBase(
+        template: String,
+        project: Project,
+    ): String {
+        val projectPath = project.basePath ?: System.getProperty("user.home")
+        val projectArgs = AgentCliProjectSettings.getInstance(project).sandboxProjectArgs.trim()
+        return substituteProjectArgs(substituteDir(template, projectPath), projectArgs)
+    }
+
+    private fun substituteProjectArgs(
+        template: String,
+        projectArgs: String,
+    ): String =
+        if (template.contains(PROJECT_ARGS_PLACEHOLDER)) {
+            template.replace(PROJECT_ARGS_PLACEHOLDER, projectArgs).replace(Regex("\\s{2,}"), " ").trim()
+        } else if (projectArgs.isNotEmpty()) {
+            "$template $projectArgs"
+        } else {
+            template
+        }
 
     private fun appendResume(
         base: String,

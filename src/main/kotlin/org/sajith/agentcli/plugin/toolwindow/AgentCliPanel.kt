@@ -172,7 +172,7 @@ class AgentCliPanel(
             AgentCliEditorBridge.getInstance(project).openNewSessionInEditor(agentType, displayName)
             return
         }
-        val cmd = AgentCommandBuilder.newSessionCommand(agentType, projectPathForCommand())
+        val cmd = AgentCommandBuilder.newSessionCommand(agentType, project)
         val session = sessionManager.createSession(agentType = agentType)
         createTerminalForSession(session, cmd)
     }
@@ -200,11 +200,9 @@ class AgentCliPanel(
         title: String?,
     ) {
         val session = sessionManager.createSession(title, agentType = agentType, agentSessionId = sessionId)
-        val resumeCmd = AgentCommandBuilder.resumeCommand(agentType, sessionId, projectPathForCommand())
+        val resumeCmd = AgentCommandBuilder.resumeCommand(agentType, sessionId, project)
         createTerminalForSession(session, resumeCmd, isResume = true)
     }
-
-    private fun projectPathForCommand(): String = project.basePath ?: System.getProperty("user.home")
 
     private fun createTerminalForSession(
         session: AgentCliSession,

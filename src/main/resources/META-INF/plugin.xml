@@ -57,8 +57,17 @@
                 displayName="Agent CLI"
                 instance="org.sajith.agentcli.plugin.settings.AgentCliSettingsConfigurable"/>
 
+        <projectConfigurable
+                id="org.sajith.agentcli.plugin.settings.project"
+                parentId="org.sajith.agentcli.plugin.settings"
+                displayName="Project"
+                instance="org.sajith.agentcli.plugin.settings.AgentCliProjectConfigurable"/>
+
         <applicationService
                 serviceImplementation="org.sajith.agentcli.plugin.settings.AgentCliSettings"/>
+
+        <projectService
+                serviceImplementation="org.sajith.agentcli.plugin.settings.AgentCliProjectSettings"/>
 
         <httpRequestHandler implementation="org.sajith.agentcli.plugin.notify.AgentCliNotifyHandler"/>
 

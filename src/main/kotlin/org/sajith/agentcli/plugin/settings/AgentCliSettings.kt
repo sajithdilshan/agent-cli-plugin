@@ -24,7 +24,7 @@ class AgentCliSettings : PersistentStateComponent<AgentCliSettings.State> {
         var codexEnabled: Boolean = true,
         var codexCommand: String = "codex",
         var sandboxEnabled: Boolean = false,
-        var sandboxCommand: String = "claude-crate --workdir {dir}",
+        var sandboxCommand: String = "claude-crate --workdir {dir} {project_args}",
         var sandboxHistoryDir: String = "~/.claude-crate",
         var sandboxUnderlyingAgent: String = AgentType.CLAUDE.name,
         var terminalFontSize: Int = 13,

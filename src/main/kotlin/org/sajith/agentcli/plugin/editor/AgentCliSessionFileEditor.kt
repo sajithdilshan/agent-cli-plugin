@@ -61,9 +61,9 @@ class AgentCliSessionFileEditor(
         val workingDir = project.basePath ?: System.getProperty("user.home")
         val command =
             if (file.agentSessionId != null) {
-                AgentCommandBuilder.resumeCommand(file.agentType, file.agentSessionId, workingDir)
+                AgentCommandBuilder.resumeCommand(file.agentType, file.agentSessionId, project)
             } else {
-                AgentCommandBuilder.newSessionCommand(file.agentType, workingDir)
+                AgentCommandBuilder.newSessionCommand(file.agentType, project)
             }
 
         terminal =
