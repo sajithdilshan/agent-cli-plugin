@@ -16,7 +16,11 @@ import org.sajith.agentcli.plugin.AgentType
 import org.sajith.agentcli.plugin.editor.AgentCliEditorBridge
 import org.sajith.agentcli.plugin.editor.AgentCliSessionVirtualFile
 import org.sajith.agentcli.plugin.notify.SessionAttentionService
-import org.sajith.agentcli.plugin.session.*
+import org.sajith.agentcli.plugin.session.AgentCliSession
+import org.sajith.agentcli.plugin.session.AgentCommandBuilder
+import org.sajith.agentcli.plugin.session.HistoricalSession
+import org.sajith.agentcli.plugin.session.SessionHistoryDeleter
+import org.sajith.agentcli.plugin.session.SessionManager
 import org.sajith.agentcli.plugin.settings.AgentCliSettings
 import org.sajith.agentcli.plugin.terminal.EmbeddedAgentTerminal
 import java.awt.BorderLayout

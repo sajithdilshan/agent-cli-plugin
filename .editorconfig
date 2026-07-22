@@ -1,0 +1,8 @@
+root = true
+
+[*.{kt,kts}]
+# Prevent IntelliJ "Optimize Imports" (Ctrl+Alt+O) from collapsing to wildcard imports.
+ij_kotlin_name_count_to_use_star_import = 2147483647
+ij_kotlin_name_count_to_use_star_import_for_members = 2147483647
+# Keep ktlint's no-wildcard-imports rule in agreement.
+ktlint_standard_no-wildcard-imports = enabled
