@@ -57,6 +57,13 @@ tasks.named("buildPlugin") {
 
 kotlin {
     jvmToolchain(17)
+    compilerOptions {
+        // Emit real JVM default methods instead of DefaultImpls bridges. Without this, Kotlin
+        // generates synthetic references to every default method on implemented platform
+        // interfaces (e.g. ToolWindowFactory.getAnchor/getIcon/manage), which the Marketplace
+        // verifier flags as experimental/deprecated API usage the plugin never actually calls.
+        freeCompilerArgs.add("-jvm-default=no-compatibility")
+    }
 }
 
 intellijPlatform {

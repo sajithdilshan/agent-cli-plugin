@@ -24,8 +24,6 @@ class AgentCliSessionVirtualFile private constructor(
 
     override fun getPath(): String = "agent-cli-session://${agentType.name}/$key"
 
-    override fun getPresentableUrl(): String = displayName
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is AgentCliSessionVirtualFile) return false

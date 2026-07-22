@@ -9,7 +9,6 @@ import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.options.BoundSearchableConfigurable
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.Messages
-import com.intellij.ui.SimpleListCellRenderer
 import com.intellij.ui.components.JBTabbedPane
 import com.intellij.ui.dsl.builder.Cell
 import com.intellij.ui.dsl.builder.bindIntText
@@ -19,6 +18,7 @@ import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.columns
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.builder.selected
+import com.intellij.ui.dsl.listCellRenderer.textListCellRenderer
 import org.sajith.agentcli.plugin.AgentType
 import org.sajith.agentcli.plugin.notify.HookInstaller
 import java.awt.BorderLayout
@@ -174,7 +174,7 @@ class AgentCliSettingsConfigurable : BoundSearchableConfigurable(
                 row("Runs as:") {
                     comboBox(
                         AgentType.entries.filter { it != AgentType.SANDBOX },
-                        SimpleListCellRenderer.create("") { it.displayName },
+                        textListCellRenderer { it?.displayName ?: "" },
                     )
                         .bindItem(
                             { settings.sandboxUnderlyingAgent },
