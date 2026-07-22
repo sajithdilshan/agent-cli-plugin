@@ -1,0 +1,75 @@
+name: Publish Plugin
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - gradle.properties
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.diff.outputs.changed }}
+      version: ${{ steps.diff.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect pluginVersion change
+        id: diff
+        run: |
+          current=$(grep -E '^pluginVersion\s*=' gradle.properties | sed -E 's/.*=\s*//' | tr -d '[:space:]')
+          previous=$(git show HEAD~1:gradle.properties 2>/dev/null | grep -E '^pluginVersion\s*=' | sed -E 's/.*=\s*//' | tr -d '[:space:]' || echo "")
+          echo "current=$current previous=$previous"
+          echo "version=$current" >> "$GITHUB_OUTPUT"
+          if [ "$current" != "$previous" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  publish:
+    needs: check-version
+    if: needs.check-version.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Publish to JetBrains Marketplace
+        env:
+          PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
+          PLUGIN_SIGNING_CERT_CHAIN_FILE: ${{ github.workspace }}/chain.crt
+          PLUGIN_SIGNING_PRIVATE_KEY_FILE: ${{ github.workspace }}/private.pem
+          PLUGIN_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
+        run: |
+          printf '%s' "${{ secrets.CERTIFICATE_CHAIN }}" > "$PLUGIN_SIGNING_CERT_CHAIN_FILE"
+          printf '%s' "${{ secrets.PRIVATE_KEY }}" > "$PLUGIN_SIGNING_PRIVATE_KEY_FILE"
+          ./gradlew publishPlugin --no-daemon
+
+      - name: Clean up signing material
+        if: always()
+        run: rm -f "${{ github.workspace }}/chain.crt" "${{ github.workspace }}/private.pem"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.check-version.outputs.version }}
+          name: v${{ needs.check-version.outputs.version }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -80,4 +80,12 @@ intellijPlatform {
             signingPrivateKeyPassword()?.let { password.set(it) }
         }
     }
+
+    publishing {
+        token = System.getenv("PUBLISH_TOKEN")
+        // Route by version suffix: "1.0.0" -> default (stable); "1.1.0-eap.2" -> "eap"; "1.1.0-beta" -> "beta".
+        val versionValue = providers.gradleProperty("pluginVersion").get()
+        val channel = versionValue.substringAfter('-', "").substringBefore('.').ifEmpty { "default" }
+        channels = listOf(channel)
+    }
 }
