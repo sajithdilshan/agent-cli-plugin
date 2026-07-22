@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - gradle.properties
+  workflow_dispatch:
 
 concurrency:
   group: publish-${{ github.ref }}
@@ -25,9 +26,14 @@ jobs:
         id: diff
         run: |
           current=$(grep -E '^pluginVersion\s*=' gradle.properties | sed -E 's/.*=\s*//' | tr -d '[:space:]')
+          echo "version=$current" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual run — skipping version diff."
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           previous=$(git show HEAD~1:gradle.properties 2>/dev/null | grep -E '^pluginVersion\s*=' | sed -E 's/.*=\s*//' | tr -d '[:space:]' || echo "")
           echo "current=$current previous=$previous"
-          echo "version=$current" >> "$GITHUB_OUTPUT"
           if [ "$current" != "$previous" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
@@ -38,6 +44,8 @@ jobs:
     needs: check-version
     if: needs.check-version.outputs.changed == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
