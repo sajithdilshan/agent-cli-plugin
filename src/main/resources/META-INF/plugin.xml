@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>org.sajith.agentcli.plugin</id>
     <name>Agent CLI</name>
-    <version>0.9.1</version>
+    <version>1.0.0</version>
     <vendor>Sajith Edirisinghe</vendor>
 
     <description><![CDATA[
@@ -21,6 +21,12 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <h3>1.0.0</h3>
+    <ul>
+        <li>Fixed a crash (NoClassDefFoundError: JBCefApp) when opening the tool window on IntelliJ Platform 2026.2+ — the plugin now declares the JCEF platform module dependency.</li>
+        <li>Fixed historical session resolution for projects whose path contains a "." (or other non-alphanumeric characters) in a directory name.</li>
+        <li>Removed the Gemini CLI agent type following Google's discontinuation of the CLI.</li>
+    </ul>
     <h3>0.9.1</h3>
     <ul>
         <li>Added project-scoped settings (Settings → Tools → Agent CLI → Project), stored in the project's workspace file.</li>
