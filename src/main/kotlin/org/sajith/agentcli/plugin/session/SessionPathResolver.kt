@@ -26,9 +26,13 @@ internal object SessionPathResolver {
         return File(expanded)
     }
 
-    fun encodeClaudeProjectPath(projectPath: String): String = normalizePath(projectPath).replace("/", "-")
+    // Agents encode the project cwd by replacing every non-alphanumeric character (including `.`,
+    // `_`, spaces) with `-`, not just path separators. Mirror that so directory lookups match.
+    private val NON_ALNUM = Regex("[^a-zA-Z0-9]")
 
-    fun encodeCursorProjectPath(projectPath: String): String = normalizePath(projectPath).replace("/", "-").removePrefix("-")
+    fun encodeClaudeProjectPath(projectPath: String): String = normalizePath(projectPath).replace(NON_ALNUM, "-")
+
+    fun encodeCursorProjectPath(projectPath: String): String = normalizePath(projectPath).replace(NON_ALNUM, "-").removePrefix("-")
 
     fun resolveProjectDirectory(
         baseDir: File,

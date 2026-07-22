@@ -2,7 +2,7 @@ package org.sajith.agentcli.plugin.editor
 
 import com.intellij.testFramework.LightVirtualFile
 import org.sajith.agentcli.plugin.AgentType
-import java.util.*
+import java.util.UUID
 
 /**
  * Virtual file that represents an agent CLI session hosted inside an IntelliJ editor tab.

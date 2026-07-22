@@ -17,7 +17,7 @@ import org.sajith.agentcli.plugin.settings.AgentCliSettings
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.net.URI
-import java.util.*
+import java.util.Base64
 import javax.swing.JComponent
 import javax.swing.Timer
 

@@ -44,7 +44,7 @@ import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.time.LocalDate
 import java.time.temporal.WeekFields
-import java.util.*
+import java.util.Locale
 import javax.swing.Box
 import javax.swing.BoxLayout
 import javax.swing.DefaultListModel
