@@ -248,16 +248,6 @@ object HookInstaller {
                     ),
             ),
             AgentConfig(
-                file = userHome.resolve(".gemini/settings.json"),
-                agent = "gemini",
-                events =
-                    listOf(
-                        EventSpec("Notification", "*", "set"),
-                        EventSpec("AfterAgent", "*", "clear"),
-                        EventSpec("SessionEnd", "*", "clear"),
-                    ),
-            ),
-            AgentConfig(
                 file = userHome.resolve(".codex/hooks.json"),
                 agent = "codex",
                 events =

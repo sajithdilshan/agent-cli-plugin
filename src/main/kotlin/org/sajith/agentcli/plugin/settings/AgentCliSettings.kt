@@ -19,8 +19,6 @@ class AgentCliSettings : PersistentStateComponent<AgentCliSettings.State> {
         var claudeCommand: String = "claude",
         var cursorEnabled: Boolean = true,
         var cursorCommand: String = "agent",
-        var geminiEnabled: Boolean = true,
-        var geminiCommand: String = "gemini",
         var codexEnabled: Boolean = true,
         var codexCommand: String = "codex",
         var sandboxEnabled: Boolean = false,
@@ -65,18 +63,6 @@ class AgentCliSettings : PersistentStateComponent<AgentCliSettings.State> {
             state.cursorCommand = value
         }
 
-    var geminiEnabled: Boolean
-        get() = state.geminiEnabled
-        set(value) {
-            state.geminiEnabled = value
-        }
-
-    var geminiCommand: String
-        get() = state.geminiCommand
-        set(value) {
-            state.geminiCommand = value
-        }
-
     var codexEnabled: Boolean
         get() = state.codexEnabled
         set(value) {
@@ -118,7 +104,6 @@ class AgentCliSettings : PersistentStateComponent<AgentCliSettings.State> {
         when (agentType) {
             AgentType.CLAUDE -> claudeEnabled
             AgentType.CURSOR -> cursorEnabled
-            AgentType.GEMINI -> geminiEnabled
             AgentType.CODEX -> codexEnabled
             AgentType.SANDBOX -> sandboxEnabled
         }

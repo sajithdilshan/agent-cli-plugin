@@ -1,9 +1,9 @@
 # Agent CLI Plugin — notification bridge (Windows).
-# Invoked by per-agent hook scripts (Claude Code, Gemini CLI, Codex CLI).
+# Invoked by per-agent hook scripts (Claude Code, Codex CLI).
 #
 # Usage:  powershell -NoProfile -ExecutionPolicy Bypass -File notify.ps1 <event> <agent>
 #   event: "set" | "clear"
-#   agent: "claude" | "gemini" | "codex" | "cursor"
+#   agent: "claude" | "codex" | "cursor"
 #
 # Reads the hook's JSON payload from stdin, merges in plugin-injected session
 # identity, and POSTs to the plugin's HTTP endpoint. Best-effort: errors are

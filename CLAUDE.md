@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**Agent CLI** is a JetBrains IntelliJ Platform plugin that runs AI agent CLI sessions (Claude Code, Cursor, Gemini CLI, OpenAI Codex) inside the IDE with a fully embedded xterm.js terminal backed by a PTY process.
+**Agent CLI** is a JetBrains IntelliJ Platform plugin that runs AI agent CLI sessions (Claude Code, Cursor, OpenAI Codex) inside the IDE with a fully embedded xterm.js terminal backed by a PTY process.
 
 * Plugin ID: `org.sajith.agentcli.plugin`
 * Version: `0.9.1` (defined in `gradle.properties`)
@@ -36,7 +36,7 @@ The `buildPlugin` task depends on `test`, so tests always run before packaging.
 
 ```
 src/main/kotlin/org/sajith/agentcli/plugin/
-├── AgentType.kt                  # Enum: CLAUDE, CURSOR, GEMINI, CODEX
+├── AgentType.kt                  # Enum: CLAUDE, CURSOR, CODEX
 ├── settings/                     # Persistent settings (PersistentStateComponent)
 │   ├── AgentCliSettings.kt       # State: per-agent enable/command, font size, flow control
 │   └── AgentCliSettingsConfigurable.kt  # Settings UI panel
@@ -54,7 +54,6 @@ src/main/kotlin/org/sajith/agentcli/plugin/
 │   ├── SessionPathResolver.kt    # Encodes/resolves agent project paths
 │   ├── ClaudeCodeHistoryReader.kt # Reads ~/.claude/projects JSONL files
 │   ├── CursorHistoryReader.kt    # Reads Cursor agent transcripts
-│   ├── GeminiHistoryReader.kt    # Reads Gemini CLI chat history
 │   ├── CodexHistoryReader.kt     # Reads Codex session data
 │   ├── HistoryReaderUtils.kt     # Shared parallel file parsing utilities
 │   └── SessionHistoryDeleter.kt  # Deletes session history from disk
@@ -115,7 +114,7 @@ The terminal uses JCEF (Chromium Embedded Framework) to host an xterm.js instanc
 
 ### Attention Notifications
 
-* A bundled shell script is installed into agent config files (Claude, Gemini, Codex)
+* A bundled shell script is installed into agent config files (Claude, Codex)
 * The script POSTs to the IDE's built-in HTTP server at `/agent-cli-plugin/notify`
 * `AgentCliNotifyHandler` receives the POST and triggers IDE balloon + OS notification
 * Hook entries carry a sentinel tag for idempotent install/uninstall

@@ -16,7 +16,6 @@ object SandboxHistoryReader {
         return when (settings.sandboxUnderlyingAgent) {
             AgentType.CLAUDE -> ClaudeCodeHistoryReader.readHistory(projectPath, home)
             AgentType.CURSOR -> CursorHistoryReader.readHistory(projectPath, home)
-            AgentType.GEMINI -> GeminiHistoryReader.readHistory(projectPath, home)
             AgentType.CODEX -> CodexHistoryReader.readHistory(projectPath, home)
             AgentType.SANDBOX -> emptyList()
         }

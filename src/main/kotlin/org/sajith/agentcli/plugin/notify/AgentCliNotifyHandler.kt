@@ -7,14 +7,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.ProjectManager
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandlerContext
-import io.netty.handler.codec.http.DefaultFullHttpResponse
-import io.netty.handler.codec.http.FullHttpRequest
-import io.netty.handler.codec.http.HttpHeaderNames
-import io.netty.handler.codec.http.HttpHeaderValues
-import io.netty.handler.codec.http.HttpMethod
-import io.netty.handler.codec.http.HttpResponseStatus
-import io.netty.handler.codec.http.HttpVersion
-import io.netty.handler.codec.http.QueryStringDecoder
+import io.netty.handler.codec.http.*
 import io.netty.util.CharsetUtil
 import org.jetbrains.ide.HttpRequestHandler
 import org.sajith.agentcli.plugin.session.SessionManager
@@ -30,7 +23,7 @@ import org.sajith.agentcli.plugin.session.SessionManager
  *     "session_id":        "<agent-native id>",      // fallback
  *     "event":             "set" | "clear",
  *     "message":           "<optional message>",
- *     "agent":             "claude" | "gemini" | "codex" | "cursor"
+ *     "agent":             "claude" | "codex" | "cursor"
  *   }
  *
  * Returns 204 on success, 400 on malformed request.

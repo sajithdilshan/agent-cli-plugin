@@ -8,7 +8,6 @@ Install one or more supported CLIs on your machine, then complete their login/au
 
 * Claude Code (`claude`)
 * Cursor agent CLI (`agent`)
-* Gemini CLI (`gemini`)
 * OpenAI Codex CLI (`codex`)
 
 You can also run any of these through a wrapper command via the **Sandbox** agent type — see [step 7](#7-configure-the-sandbox-agent-optional).
@@ -21,7 +20,6 @@ From your terminal, run the same commands you plan to configure in the plugin, f
 
 * `claude`
 * `agent`
-* `gemini`
 * `codex`
 
 If your command is custom (alias, wrapper script, or full path), verify that exact command works before configuring the plugin.
@@ -36,7 +34,6 @@ Set the command fields you want to use:
 
 * `Claude command` (default: `claude`)
 * `Cursor command` (default: `agent`)
-* `Gemini command` (default: `gemini`)
 * `Codex command` (default: `codex`)
 * Each agent has an `Enable` checkbox — disabled agents are hidden from the `+` menu.
 * Optional: `Terminal font size` (8-32, default 13)
@@ -53,7 +50,7 @@ Notes:
 Open the `Agent CLI` tool window.
 
 * Click `+` in the left icon strip.
-* Choose `Claude`, `Cursor`, `Gemini`, `Codex`, or `Sandbox`.
+* Choose `Claude`, `Cursor`, `Codex`, or `Sandbox`.
 * A terminal tab opens and runs the configured command in the current project directory.
 
 ## 5) Resume a previous session (optional)
@@ -75,7 +72,7 @@ This is opt-in because it writes hook entries into your per-agent config files.
 2. (Optional) Click `Preview…` to see exactly what will be merged into each file, one tab per agent, with JSON syntax highlighting.
 3. Click `Install Hooks`. The plugin will:
     * Drop a notify script into `~/.agent-cli-plugin/notify.sh` (or `notify.ps1` on Windows).
-    * Merge a sentinel-tagged hook entry into `~/.claude/settings.json`, `~/.gemini/settings.json`, and `~/.codex/hooks.json`.
+    * Merge a sentinel-tagged hook entry into `~/.claude/settings.json` and `~/.codex/hooks.json`.
     * Save a `.bak` sibling next to any file it modifies.
 4. Start a new agent session from the tool window. The hook only posts to the IDE when the session is launched from the plugin — running the same CLI in a plain terminal is a no-op.
 5. Click `Uninstall` any time to remove the hook entries, restore from `.bak` if you prefer, and delete the notify script.
@@ -93,7 +90,7 @@ Open `Settings` -> `Tools` -> `Agent CLI` -> `Sandbox` and set:
 
 * `Command` — the wrapper command. Use `{dir}` where the project path should go (inserted quoted); if omitted, the path is appended. Example: `claude-crate --workdir {dir}`
 * `History dir` — base directory where the sandbox stores history (e.g. `~/.claude-crate`).
-* `Runs as` — the agent running inside the sandbox (Claude / Cursor / Gemini / Codex). This selects the history parser and resume syntax.
+* `Runs as` — the agent running inside the sandbox (Claude / Cursor / Codex). This selects the history parser and resume syntax.
 * `Enable` — toggles the Sandbox entry in the `+` menu.
 
 Then start a session from the `+` menu just like any other agent. New sessions run `<command>` with `{dir}` substituted; resuming runs the same with the underlying agent's resume flag appended (e.g. `claude-crate --workdir "<project>" --resume <sessionId>`), so the wrapper must forward trailing arguments to the underlying CLI.

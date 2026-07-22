@@ -30,7 +30,6 @@ object SessionHistoryDeleter {
         when (agentType) {
             AgentType.CLAUDE -> deleteClaudeSession(sessionId, projectPath, agentHome)
             AgentType.CURSOR -> deleteCursorSession(sessionId, projectPath, agentHome)
-            AgentType.GEMINI -> deleteGeminiSession(sessionId, projectPath, agentHome)
             AgentType.CODEX -> deleteCodexSession(sessionId, agentHome)
             AgentType.SANDBOX -> deleteSandboxSession(sessionId, projectPath)
         }
@@ -96,25 +95,5 @@ object SessionHistoryDeleter {
         val indexUpdated = CodexHistoryReader.removeFromIndex(sessionId, codexDir)
         LOG.info("[AgentCLI] Removed Codex session from index: $sessionId — $indexUpdated")
         return fileDeleted || indexUpdated
-    }
-
-    private fun deleteGeminiSession(
-        sessionId: String,
-        projectPath: String,
-        agentHome: File?,
-    ): Boolean {
-        val geminiDir = agentHome ?: File(System.getProperty("user.home"), ".gemini")
-        if (!geminiDir.exists()) return false
-
-        val projectName = SessionPathResolver.resolveGeminiProjectName(geminiDir, projectPath) ?: return false
-        val chatsDir = geminiDir.resolve("tmp/$projectName/chats")
-        if (!chatsDir.exists()) return false
-
-        val sessionFile = chatsDir.resolve("$sessionId.json")
-        if (!sessionFile.exists()) return false
-
-        val deleted = sessionFile.delete()
-        LOG.info("[AgentCLI] Deleted Gemini session file: ${sessionFile.absolutePath} — $deleted")
-        return deleted
     }
 }

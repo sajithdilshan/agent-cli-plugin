@@ -7,11 +7,11 @@
     <description><![CDATA[
     <p>Run AI coding agents directly inside your JetBrains IDE with a fully embedded terminal and session management, either in the tool window or in regular editor tabs.</p>
     <ul>
-        <li>Support for Claude Code, Cursor Agent, OpenAI Codex and Gemini CLI — start a session for any enabled agent from the + menu.</li>
+        <li>Support for Claude Code, Cursor Agent and OpenAI Codex — start a session for any enabled agent from the + menu.</li>
         <li>Multiple simultaneous sessions — create, switch, close, and delete sessions. Sessions auto-close when the agent process exits.</li>
         <li>Session history — browse past sessions grouped by date (Today, Yesterday, This Week, Older) and resume previous sessions by ID where local agent data is available.</li>
         <li>Editor-hosted sessions — right-click any active or historical session and pick "Open in Code Editor" to move it into a regular editor tab; a "Return to plugin view" link moves it back. Optional settings let new sessions and/or resumed historical sessions always open as editor tabs by default.</li>
-        <li>Attention notifications — when an agent needs your input (permission prompts, idle confirmations, Codex permission requests), the session row shows a red dot instead of the green play icon and an IDE balloon (with OS banner) fires. Opt-in: install hooks from Settings with a one-click action that merges idempotently into Claude / Gemini / Codex config files, with .bak backups and clean uninstall.</li>
+        <li>Attention notifications — when an agent needs your input (permission prompts, idle confirmations, Codex permission requests), the session row shows a red dot instead of the green play icon and an IDE balloon (with OS banner) fires. Opt-in: install hooks from Settings with a one-click action that merges idempotently into Claude / Codex config files, with .bak backups and clean uninstall.</li>
         <li>High-performance embedded terminal — xterm.js-based with optional watermark flow control, clickable URL detection, UTF-8 encoding, and a 10,000-line scrollback buffer.</li>
         <li>Theme-aware UI — terminal colors and scrollbars follow the IDE look-and-feel and update dynamically when the theme changes.</li>
         <li>Compact session sidebar — collapsible panel showing active sessions and browsable history with right-click context menus. A red overlay dot on the collapse toggle keeps attention-needed state visible when the sidebar is collapsed.</li>
@@ -35,6 +35,7 @@
     ]]></change-notes>
 
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.jcef</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow id="Agent CLI"

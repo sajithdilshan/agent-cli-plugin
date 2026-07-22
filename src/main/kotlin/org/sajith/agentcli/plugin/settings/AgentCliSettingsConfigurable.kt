@@ -132,20 +132,6 @@ class AgentCliSettingsConfigurable : BoundSearchableConfigurable(
                     cmdField.enabledIf(cursorCheckbox.selected)
                 }
             }
-            lateinit var geminiCheckbox: Cell<JCheckBox>
-            group("Gemini CLI") {
-                row("Command:") {
-                    val cmdField =
-                        textField()
-                            .columns(20)
-                            .bindText(settings::geminiCommand)
-                            .comment("The CLI command to launch Gemini CLI (e.g. gemini)")
-                    geminiCheckbox =
-                        checkBox("Enable")
-                            .bindSelected(settings::geminiEnabled)
-                    cmdField.enabledIf(geminiCheckbox.selected)
-                }
-            }
             lateinit var codexCheckbox: Cell<JCheckBox>
             group("OpenAI Codex") {
                 row("Command:") {
@@ -198,7 +184,7 @@ class AgentCliSettingsConfigurable : BoundSearchableConfigurable(
             group("Attention Notifications") {
                 row {
                     comment(
-                        "Install hooks into ~/.claude/settings.json, ~/.gemini/settings.json, and ~/.codex/hooks.json " +
+                        "Install hooks into ~/.claude/settings.json and ~/.codex/hooks.json " +
                             "so this plugin is notified when an agent is waiting for you (red dot in the sessions panel + IDE balloon). " +
                             "A .bak copy of each existing file is saved alongside before any changes are written.",
                     )

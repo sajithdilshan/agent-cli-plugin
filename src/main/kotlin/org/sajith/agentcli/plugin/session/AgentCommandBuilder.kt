@@ -91,7 +91,6 @@ object AgentCommandBuilder {
         return when (agentType) {
             AgentType.CLAUDE -> settings.claudeCommand
             AgentType.CURSOR -> settings.cursorCommand
-            AgentType.GEMINI -> settings.geminiCommand
             AgentType.CODEX -> settings.codexCommand
             AgentType.SANDBOX -> settings.sandboxCommand
         }

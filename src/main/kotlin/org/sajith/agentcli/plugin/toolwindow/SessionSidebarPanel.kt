@@ -564,7 +564,6 @@ class SessionSidebarPanel(
             when (agentType) {
                 AgentType.CLAUDE -> ClaudeCodeHistoryReader.readHistory(projectPath)
                 AgentType.CURSOR -> CursorHistoryReader.readHistory(projectPath)
-                AgentType.GEMINI -> GeminiHistoryReader.readHistory(projectPath)
                 AgentType.CODEX -> CodexHistoryReader.readHistory(projectPath)
                 AgentType.SANDBOX -> SandboxHistoryReader.readHistory(projectPath)
             }.map { it.copy(agentType = agentType) }
