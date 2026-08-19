@@ -3,7 +3,9 @@ package org.sajith.agentcli.plugin.terminal
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.util.Disposer
+import com.intellij.ui.jcef.JBCefApp
 import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefJSQuery
@@ -29,11 +31,11 @@ class CefTerminalPanel(
     private val loadingText: String = "Starting Session...",
     private val sandbox: Boolean = false,
 ) : Disposable {
-    private val browser: JBCefBrowser = JBCefBrowser()
-    private val inputQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
-    private val resizeQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
-    private val openLinkQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
-    private val ackQuery: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
+    private val browser: JBCefBrowser
+    private val inputQuery: JBCefJSQuery
+    private val resizeQuery: JBCefJSQuery
+    private val openLinkQuery: JBCefJSQuery
+    private val ackQuery: JBCefJSQuery
 
     @Volatile
     private var isPageLoaded = false
@@ -51,12 +53,32 @@ class CefTerminalPanel(
     /** Swing timer to debounce componentResized events. */
     private val resizeDebounceTimer = Timer(200) { onResizeSettled() }.apply { isRepeats = false }
 
-    private val resizeListener: ComponentAdapter
+    private var resizeListener: ComponentAdapter? = null
 
     val component: JComponent get() = browser.component
 
     init {
+        // The browser and the JS bridges are created up front and separately from the rest of
+        // the wiring: creating them talks to JCEF (in recent IDEs an out-of-process CEF server)
+        // and can fail — e.g. when that server process died in a long-running IDE session.
+        // Anything already created is torn down before the failure is rethrown so a failed
+        // session never leaks native objects.
+        val bridges = createBridges()
+        browser = bridges.browser
+        inputQuery = bridges.inputQuery
+        resizeQuery = bridges.resizeQuery
+        openLinkQuery = bridges.openLinkQuery
+        ackQuery = bridges.ackQuery
 
+        try {
+            wireHandlersAndLoadPage(parentDisposable)
+        } catch (t: Throwable) {
+            disposeCefResources()
+            throw t
+        }
+    }
+
+    private fun wireHandlersAndLoadPage(parentDisposable: Disposable) {
         inputQuery.addHandler { base64Data ->
             try {
                 val decoded = String(Base64.getDecoder().decode(base64Data), Charsets.UTF_8)
@@ -163,14 +185,15 @@ class CefTerminalPanel(
 
         // Listen to Swing component resize — this fires when the IDE resizes the tool window.
         // We debounce and only call JS once the resize gesture settles.
-        resizeListener =
+        val listener =
             object : ComponentAdapter() {
                 override fun componentResized(e: ComponentEvent) {
                     if (!resizeEnabledState || !isPageLoaded) return
                     resizeDebounceTimer.restart()
                 }
             }
-        browser.component.addComponentListener(resizeListener)
+        resizeListener = listener
+        browser.component.addComponentListener(listener)
 
         val html = buildTerminalHtml()
         browser.loadHTML(html)
@@ -279,16 +302,66 @@ class CefTerminalPanel(
 
     override fun dispose() {
         resizeDebounceTimer.stop()
-        browser.component.removeComponentListener(resizeListener)
-        Disposer.dispose(inputQuery)
-        Disposer.dispose(resizeQuery)
-        Disposer.dispose(openLinkQuery)
-        Disposer.dispose(ackQuery)
-        Disposer.dispose(browser)
+        resizeListener?.let { browser.component.removeComponentListener(it) }
+        disposeCefResources()
+    }
+
+    private fun disposeCefResources() {
+        // Best-effort: when JCEF is already broken, disposing one bridge must not stop the rest.
+        listOf(inputQuery, resizeQuery, openLinkQuery, ackQuery, browser).forEach {
+            try {
+                Disposer.dispose(it)
+            } catch (e: Exception) {
+                LOG.warn("[AgentCLI] CefTerminalPanel: failed to dispose JCEF resource", e)
+            }
+        }
     }
 
     companion object {
         private val LOG = Logger.getInstance(CefTerminalPanel::class.java)
+
+        private class Bridges(
+            val browser: JBCefBrowser,
+            val inputQuery: JBCefJSQuery,
+            val resizeQuery: JBCefJSQuery,
+            val openLinkQuery: JBCefJSQuery,
+            val ackQuery: JBCefJSQuery,
+        )
+
+        /**
+         * Creates the JCEF browser and the four JS↔JVM bridges, or throws
+         * [TerminalUnavailableException] if JCEF cannot serve them. Partial results are disposed
+         * before throwing.
+         */
+        private fun createBridges(): Bridges {
+            if (!JBCefApp.isSupported()) {
+                throw TerminalUnavailableException(
+                    "JCEF (the IDE's embedded browser) is not available in this runtime.",
+                )
+            }
+
+            var browser: JBCefBrowser? = null
+            val queries = mutableListOf<JBCefJSQuery>()
+            try {
+                val created = JBCefBrowser()
+                browser = created
+                repeat(4) { queries.add(JBCefJSQuery.create(created as JBCefBrowserBase)) }
+                return Bridges(created, queries[0], queries[1], queries[2], queries[3])
+            } catch (t: Throwable) {
+                (queries + listOfNotNull(browser)).forEach {
+                    try {
+                        Disposer.dispose(it)
+                    } catch (e: Exception) {
+                        LOG.warn("[AgentCLI] CefTerminalPanel: cleanup after failed JCEF init", e)
+                    }
+                }
+                if (t is ProcessCanceledException) throw t
+                throw TerminalUnavailableException(
+                    "The IDE's embedded browser (JCEF) is not responding. Restarting the IDE usually fixes this.",
+                    t,
+                )
+            }
+        }
 
         private data class TerminalAssets(
             val xtermJs: String,

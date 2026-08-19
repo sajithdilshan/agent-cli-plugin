@@ -1,12 +1,15 @@
 package org.sajith.agentcli.plugin.toolwindow
 
 import com.intellij.ide.ui.LafManagerListener
+import com.intellij.notification.NotificationGroupManager
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerEvent
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
@@ -23,6 +26,7 @@ import org.sajith.agentcli.plugin.session.SessionHistoryDeleter
 import org.sajith.agentcli.plugin.session.SessionManager
 import org.sajith.agentcli.plugin.settings.AgentCliSettings
 import org.sajith.agentcli.plugin.terminal.EmbeddedAgentTerminal
+import org.sajith.agentcli.plugin.terminal.TerminalUnavailableException
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import javax.swing.JPanel
@@ -215,16 +219,27 @@ class AgentCliPanel(
     ) {
         val workingDir = project.basePath ?: System.getProperty("user.home")
 
+        // JCEF can be unusable even after JBCefApp.isSupported() passed — e.g. the out-of-process
+        // CEF server died earlier in a long IDE session. Report it and drop the pending session
+        // instead of leaving a sidebar row that can never be shown.
         val terminal =
-            EmbeddedAgentTerminal(
-                parentDisposable = parentDisposable,
-                project = project,
-                session = session,
-                workingDirectory = workingDir,
-                command = command,
-                isResume = isResume,
-                onExit = { closeSession(session) },
-            )
+            try {
+                EmbeddedAgentTerminal(
+                    parentDisposable = parentDisposable,
+                    project = project,
+                    session = session,
+                    workingDirectory = workingDir,
+                    command = command,
+                    isResume = isResume,
+                    onExit = { closeSession(session) },
+                )
+            } catch (t: Throwable) {
+                sessionManager.removeSession(session)
+                if (t is ProcessCanceledException) throw t
+                LOG.warn("[AgentCLI] Failed to create embedded terminal for session ${session.id}", t)
+                notifyTerminalUnavailable(t)
+                return
+            }
 
         terminals[session.id] = terminal
         terminalPanel.add(terminal.component, session.id)
@@ -241,6 +256,16 @@ class AgentCliPanel(
         updateToolWindowTitle()
 
         terminal.start()
+    }
+
+    private fun notifyTerminalUnavailable(error: Throwable) {
+        val detail =
+            (error as? TerminalUnavailableException)?.message
+                ?: "The embedded terminal could not be created. See idea.log for details."
+        NotificationGroupManager.getInstance()
+            .getNotificationGroup(NOTIFICATION_GROUP_ID)
+            .createNotification("Agent CLI session could not be started", detail, NotificationType.ERROR)
+            .notify(project)
     }
 
     /**
@@ -385,5 +410,8 @@ class AgentCliPanel(
 
     companion object {
         private val LOG = Logger.getInstance(AgentCliPanel::class.java)
+
+        /** Declared in plugin.xml; used for session-level failures the user needs to know about. */
+        private const val NOTIFICATION_GROUP_ID = "Agent CLI"
     }
 }

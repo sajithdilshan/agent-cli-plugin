@@ -2,9 +2,11 @@ package org.sajith.agentcli.plugin.editor
 
 import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorLocation
 import com.intellij.openapi.fileEditor.FileEditorState
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
@@ -22,6 +24,7 @@ import java.beans.PropertyChangeListener
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
+import javax.swing.SwingConstants
 import javax.swing.SwingUtilities
 
 /**
@@ -40,7 +43,9 @@ class AgentCliSessionFileEditor(
     private val disposable = Disposer.newDisposable("AgentCliSessionFileEditor")
     private val rootPanel = JPanel(BorderLayout())
     private val session: AgentCliSession
-    private val terminal: EmbeddedAgentTerminal
+
+    /** Null when the embedded terminal could not be created; the tab then shows [createUnavailableView]. */
+    private val terminal: EmbeddedAgentTerminal?
 
     @Volatile
     private var returnToPluginRequested = false
@@ -66,35 +71,62 @@ class AgentCliSessionFileEditor(
                 AgentCommandBuilder.newSessionCommand(file.agentType, project)
             }
 
+        // Terminal creation talks to JCEF and can fail (e.g. the CEF server process died in a
+        // long-running IDE session). Failing here would abort editor creation with a
+        // PluginException and leave the session registered with no owner, so the failure is
+        // reported inside the tab instead.
         terminal =
-            EmbeddedAgentTerminal(
-                parentDisposable = disposable,
-                project = project,
-                session = session,
-                workingDirectory = workingDir,
-                command = command,
-                isResume = file.agentSessionId != null,
-                onExit = {
-                    SwingUtilities.invokeLater {
-                        if (!disposed) {
-                            com.intellij.openapi.fileEditor.FileEditorManager.getInstance(project).closeFile(file)
+            try {
+                EmbeddedAgentTerminal(
+                    parentDisposable = disposable,
+                    project = project,
+                    session = session,
+                    workingDirectory = workingDir,
+                    command = command,
+                    isResume = file.agentSessionId != null,
+                    onExit = {
+                        SwingUtilities.invokeLater {
+                            if (!disposed) {
+                                com.intellij.openapi.fileEditor.FileEditorManager.getInstance(project).closeFile(file)
+                            }
                         }
-                    }
-                },
-            )
+                    },
+                )
+            } catch (t: Throwable) {
+                sessionManager.removeSession(session)
+                Disposer.dispose(disposable)
+                if (t is ProcessCanceledException) throw t
+                LOG.warn("[AgentCLI] Failed to create embedded terminal for editor session ${session.id}", t)
+                null
+            }
 
-        rootPanel.add(createBanner(), BorderLayout.NORTH)
-        rootPanel.add(terminal.component, BorderLayout.CENTER)
-        terminal.setResizeEnabled(true)
+        val activeTerminal = terminal
+        if (activeTerminal == null) {
+            rootPanel.add(createUnavailableView(), BorderLayout.CENTER)
+        } else {
+            rootPanel.add(createBanner(), BorderLayout.NORTH)
+            rootPanel.add(activeTerminal.component, BorderLayout.CENTER)
+            activeTerminal.setResizeEnabled(true)
 
-        project.messageBus.connect(disposable)
-            .subscribe(
-                LafManagerListener.TOPIC,
-                LafManagerListener { terminal.applyTheme() },
-            )
+            project.messageBus.connect(disposable)
+                .subscribe(
+                    LafManagerListener.TOPIC,
+                    LafManagerListener { activeTerminal.applyTheme() },
+                )
 
-        terminal.start()
+            activeTerminal.start()
+        }
     }
+
+    private fun createUnavailableView(): JComponent =
+        JLabel(
+            "<html><center>This session could not be started because the IDE's embedded browser " +
+                "(JCEF) is unavailable.<br>Restart the IDE and try again.</center></html>",
+            SwingConstants.CENTER,
+        ).apply {
+            foreground = JBColor.GRAY
+            border = JBUI.Borders.empty(16)
+        }
 
     private fun createBanner(): JComponent {
         val label =
@@ -127,7 +159,7 @@ class AgentCliSessionFileEditor(
 
     override fun getComponent(): JComponent = rootPanel
 
-    override fun getPreferredFocusedComponent(): JComponent = terminal.component
+    override fun getPreferredFocusedComponent(): JComponent = terminal?.component ?: rootPanel
 
     override fun getName(): String = file.displayName
 
@@ -149,8 +181,11 @@ class AgentCliSessionFileEditor(
         if (disposed) return
         disposed = true
 
-        SessionManager.getInstance(project).removeSession(session)
-        Disposer.dispose(disposable)
+        // When the terminal failed to start, the session and disposable were already cleaned up.
+        if (terminal != null) {
+            SessionManager.getInstance(project).removeSession(session)
+            Disposer.dispose(disposable)
+        }
 
         val resumeId = file.agentSessionId
         if (returnToPluginRequested && resumeId != null) {
@@ -163,6 +198,8 @@ class AgentCliSessionFileEditor(
     }
 
     companion object {
+        private val LOG = Logger.getInstance(AgentCliSessionFileEditor::class.java)
+
         @Suppress("unused")
         val EDITOR_KEY: Key<AgentCliSessionFileEditor> = Key.create("agent-cli-session-file-editor")
     }

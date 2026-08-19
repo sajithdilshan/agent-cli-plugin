@@ -76,6 +76,10 @@
 
         <fileIconProvider implementation="org.sajith.agentcli.plugin.editor.AgentCliSessionFileIconProvider"/>
 
+        <notificationGroup id="Agent CLI"
+                           displayType="BALLOON"
+                           toolWindowId="Agent CLI"/>
+
         <notificationGroup id="Agent CLI Attention"
                            displayType="BALLOON"
                            isLogByDefault="false"
