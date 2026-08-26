@@ -1,4 +1,5 @@
 import java.util.Properties
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id("java")
@@ -41,9 +42,15 @@ repositories {
 
 dependencies {
     intellijPlatform {
-        intellijIdea(providers.gradleProperty("platformVersion"))
+        val localPlatformPath = providers.gradleProperty("localPlatformPath")
+        if (localPlatformPath.isPresent) {
+            local(localPlatformPath)
+        } else {
+            intellijIdea(providers.gradleProperty("platformVersion"))
+        }
     }
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    testRuntimeOnly("junit:junit:4.13.2")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
@@ -55,9 +62,14 @@ tasks.named("buildPlugin") {
     dependsOn(tasks.test)
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
 kotlin {
-    jvmToolchain(17)
     compilerOptions {
+        jvmTarget = JvmTarget.JVM_17
         // Emit real JVM default methods instead of DefaultImpls bridges. Without this, Kotlin
         // generates synthetic references to every default method on implemented platform
         // interfaces (e.g. ToolWindowFactory.getAnchor/getIcon/manage), which the Marketplace
