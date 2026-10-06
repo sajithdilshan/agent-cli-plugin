@@ -84,7 +84,8 @@ class AgentCliPanel(
         updateTerminalPanelVisibility()
 
         // Keep embedded terminals in sync when the IDE LaF / editor colors change.
-        project.messageBus.connect(parentDisposable)
+        project.messageBus
+            .connect(parentDisposable)
             .subscribe(
                 LafManagerListener.TOPIC,
                 LafManagerListener {
@@ -93,7 +94,10 @@ class AgentCliPanel(
             )
 
         // Reload history when agent settings change (e.g. agents enabled/disabled).
-        ApplicationManager.getApplication().messageBus.connect(parentDisposable)
+        ApplicationManager
+            .getApplication()
+            .messageBus
+            .connect(parentDisposable)
             .subscribe(
                 AgentCliSettings.SETTINGS_CHANGED_TOPIC,
                 AgentCliSettings.SettingsChangeListener {
@@ -102,7 +106,8 @@ class AgentCliPanel(
             )
 
         // When the editor-hosted session asks to return to the plugin view, resume here.
-        project.messageBus.connect(parentDisposable)
+        project.messageBus
+            .connect(parentDisposable)
             .subscribe(
                 AgentCliEditorBridge.RESUME_IN_PLUGIN_TOPIC,
                 AgentCliEditorBridge.ResumeInPluginListener { agentType, sessionId, displayName ->
@@ -113,7 +118,8 @@ class AgentCliPanel(
 
         // Refresh the history list whenever an editor-hosted session tab is closed so
         // the session reappears under Today / Yesterday / etc.
-        project.messageBus.connect(parentDisposable)
+        project.messageBus
+            .connect(parentDisposable)
             .subscribe(
                 FileEditorManagerListener.FILE_EDITOR_MANAGER,
                 object : FileEditorManagerListener {
@@ -134,7 +140,8 @@ class AgentCliPanel(
         // and switch back to them. Terminal-hosted sessions are already managed inline
         // by createTerminalForSession / closeSession, but we also ignore duplicate
         // adds defensively via sidebar contains-check.
-        project.messageBus.connect(parentDisposable)
+        project.messageBus
+            .connect(parentDisposable)
             .subscribe(
                 SessionManager.SESSION_LIFECYCLE_TOPIC,
                 object : SessionManager.SessionLifecycleListener {
@@ -262,7 +269,8 @@ class AgentCliPanel(
         val detail =
             (error as? TerminalUnavailableException)?.message
                 ?: "The embedded terminal could not be created. See idea.log for details."
-        NotificationGroupManager.getInstance()
+        NotificationGroupManager
+            .getInstance()
             .getNotificationGroup(NOTIFICATION_GROUP_ID)
             .createNotification("Agent CLI session could not be started", detail, NotificationType.ERROR)
             .notify(project)
@@ -278,7 +286,9 @@ class AgentCliPanel(
      */
     private fun virtualFileFor(session: AgentCliSession): AgentCliSessionVirtualFile? {
         val key = session.editorFileKey ?: session.agentSessionId ?: return null
-        return FileEditorManager.getInstance(project).openFiles
+        return FileEditorManager
+            .getInstance(project)
+            .openFiles
             .asSequence()
             .filterIsInstance<AgentCliSessionVirtualFile>()
             .firstOrNull { it.key == key }

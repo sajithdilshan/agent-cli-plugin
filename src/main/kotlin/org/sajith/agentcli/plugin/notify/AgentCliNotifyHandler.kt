@@ -36,10 +36,9 @@ import org.sajith.agentcli.plugin.session.SessionManager
  * Returns 204 on success, 400 on malformed request.
  */
 class AgentCliNotifyHandler : HttpRequestHandler() {
-    override fun isSupported(request: FullHttpRequest): Boolean {
-        return request.method() == HttpMethod.POST &&
+    override fun isSupported(request: FullHttpRequest): Boolean =
+        request.method() == HttpMethod.POST &&
             request.uri().startsWith("/agent-cli-plugin/notify")
-    }
 
     override fun process(
         urlDecoder: QueryStringDecoder,
@@ -120,7 +119,8 @@ class AgentCliNotifyHandler : HttpRequestHandler() {
         status: HttpResponseStatus,
     ) {
         val response = DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, Unpooled.EMPTY_BUFFER)
-        response.headers()
+        response
+            .headers()
             .set(HttpHeaderNames.CONTENT_LENGTH, 0)
             .set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN)
         val keepAlive =

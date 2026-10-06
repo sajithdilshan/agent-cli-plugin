@@ -15,7 +15,9 @@ import org.sajith.agentcli.plugin.editor.AgentCliEditorBridge.Companion.RESUME_I
  * in the sidebar when the editor asks for it.
  */
 @Service(Service.Level.PROJECT)
-class AgentCliEditorBridge(private val project: Project) {
+class AgentCliEditorBridge(
+    private val project: Project,
+) {
     fun openInEditor(
         agentType: AgentType,
         agentSessionId: String,
@@ -38,7 +40,8 @@ class AgentCliEditorBridge(private val project: Project) {
         agentSessionId: String,
         displayName: String,
     ) {
-        project.messageBus.syncPublisher(RESUME_IN_PLUGIN_TOPIC)
+        project.messageBus
+            .syncPublisher(RESUME_IN_PLUGIN_TOPIC)
             .resumeInPluginView(agentType, agentSessionId, displayName)
     }
 

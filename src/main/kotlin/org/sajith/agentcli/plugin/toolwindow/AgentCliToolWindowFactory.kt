@@ -10,7 +10,9 @@ import com.intellij.ui.jcef.JBCefApp
 import javax.swing.JLabel
 import javax.swing.SwingConstants
 
-class AgentCliToolWindowFactory : ToolWindowFactory, DumbAware {
+class AgentCliToolWindowFactory :
+    ToolWindowFactory,
+    DumbAware {
     override fun createToolWindowContent(
         project: Project,
         toolWindow: ToolWindow,

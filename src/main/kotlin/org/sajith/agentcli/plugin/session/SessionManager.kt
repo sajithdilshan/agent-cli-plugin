@@ -6,7 +6,9 @@ import com.intellij.util.messages.Topic
 import org.sajith.agentcli.plugin.AgentType
 
 @Service(Service.Level.PROJECT)
-class SessionManager(private val project: Project) {
+class SessionManager(
+    private val project: Project,
+) {
     private val activeSessions = mutableListOf<AgentCliSession>()
     private val openSessionIds = mutableMapOf<AgentType, MutableSet<String>>()
     private var sessionCounter = 0

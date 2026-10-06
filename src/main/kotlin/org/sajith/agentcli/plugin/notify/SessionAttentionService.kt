@@ -15,7 +15,9 @@ import org.sajith.agentcli.plugin.session.SessionManager
  * and surfaces IntelliJ balloon notifications.
  */
 @Service(Service.Level.PROJECT)
-class SessionAttentionService(private val project: Project) {
+class SessionAttentionService(
+    private val project: Project,
+) {
     private val sessionManager get() = SessionManager.getInstance(project)
 
     fun onNotify(
@@ -60,7 +62,8 @@ class SessionAttentionService(private val project: Project) {
         val agentLabel = agent?.takeIf { it.isNotBlank() } ?: session.agentType.displayName
         val title = "$agentLabel · ${session.displayName}"
         val notification =
-            NotificationGroupManager.getInstance()
+            NotificationGroupManager
+                .getInstance()
                 .getNotificationGroup(NOTIFICATION_GROUP_ID)
                 .createNotification(title, message, NotificationType.INFORMATION)
                 .addAction(

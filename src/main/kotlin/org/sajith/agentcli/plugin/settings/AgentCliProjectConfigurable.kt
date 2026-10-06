@@ -6,10 +6,12 @@ import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.columns
 import com.intellij.ui.dsl.builder.panel
 
-class AgentCliProjectConfigurable(project: Project) : BoundSearchableConfigurable(
-    "Agent CLI",
-    "org.sajith.agentcli.plugin.settings.project",
-) {
+class AgentCliProjectConfigurable(
+    project: Project,
+) : BoundSearchableConfigurable(
+        "Agent CLI",
+        "org.sajith.agentcli.plugin.settings.project",
+    ) {
     private val settings = AgentCliProjectSettings.getInstance(project)
 
     override fun createPanel() =

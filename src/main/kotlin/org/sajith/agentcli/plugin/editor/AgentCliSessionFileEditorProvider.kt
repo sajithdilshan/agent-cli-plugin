@@ -7,7 +7,9 @@ import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 
-class AgentCliSessionFileEditorProvider : FileEditorProvider, DumbAware {
+class AgentCliSessionFileEditorProvider :
+    FileEditorProvider,
+    DumbAware {
     override fun accept(
         project: Project,
         file: VirtualFile,

@@ -72,8 +72,8 @@ object HookInstaller {
         return result
     }
 
-    fun install(): InstallResult {
-        return try {
+    fun install(): InstallResult =
+        try {
             val script = writeScript()
             val configs = configs()
             val backups = mutableListOf<Path>()
@@ -105,10 +105,9 @@ object HookInstaller {
                 error = t.message ?: t.javaClass.simpleName,
             )
         }
-    }
 
-    fun uninstall(): InstallResult {
-        return try {
+    fun uninstall(): InstallResult =
+        try {
             val touched = mutableListOf<Path>()
             val backups = mutableListOf<Path>()
             for ((file, _, _) in configs()) {
@@ -139,7 +138,6 @@ object HookInstaller {
                 error = t.message ?: t.javaClass.simpleName,
             )
         }
-    }
 
     private fun deleteScript(): Boolean {
         val target = scriptPath
@@ -176,7 +174,8 @@ object HookInstaller {
             val existing = if (Files.isRegularFile(file)) Files.readString(file) else null
             val root =
                 existing?.let {
-                    runCatching { JsonParser.parseString(it) }.getOrNull()
+                    runCatching { JsonParser.parseString(it) }
+                        .getOrNull()
                         ?.takeIf { el -> el.isJsonObject }
                         ?.asJsonObject
                 }
@@ -208,7 +207,10 @@ object HookInstaller {
                 if (!Files.exists(base)) {
                     base
                 } else {
-                    val stamp = java.time.LocalDateTime.now().format(BACKUP_TIMESTAMP)
+                    val stamp =
+                        java.time.LocalDateTime
+                            .now()
+                            .format(BACKUP_TIMESTAMP)
                     file.resolveSibling("${file.fileName}.$stamp.bak")
                 }
             Files.copy(file, target, StandardCopyOption.COPY_ATTRIBUTES)
@@ -219,7 +221,9 @@ object HookInstaller {
         }
     }
 
-    private val BACKUP_TIMESTAMP = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
+    private val BACKUP_TIMESTAMP =
+        java.time.format.DateTimeFormatter
+            .ofPattern("yyyyMMdd-HHmmss")
 
     // --- internals ---------------------------------------------------------
 

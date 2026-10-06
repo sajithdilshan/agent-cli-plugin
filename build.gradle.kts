@@ -2,9 +2,9 @@ import java.util.Properties
 
 plugins {
     id("java")
-    id("org.jetbrains.kotlin.jvm") version "2.3.20"
-    id("org.jetbrains.intellij.platform") version "2.13.1"
-    id("org.jlleitschuh.gradle.ktlint") version "12.2.0"
+    id("org.jetbrains.kotlin.jvm") version "2.4.20"
+    id("org.jetbrains.intellij.platform") version "2.19.0"
+    id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
 }
 
 group = providers.gradleProperty("pluginGroup").get()
@@ -43,7 +43,7 @@ dependencies {
     intellijPlatform {
         intellijIdea(providers.gradleProperty("platformVersion"))
     }
-    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    testImplementation("org.junit.jupiter:junit-jupiter:6.1.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

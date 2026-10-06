@@ -7,20 +7,19 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 internal object HistoryReaderUtils {
-    fun fileTimestamp(file: File): LocalDateTime {
-        return LocalDateTime.ofInstant(
+    fun fileTimestamp(file: File): LocalDateTime =
+        LocalDateTime.ofInstant(
             Instant.ofEpochMilli(file.lastModified()),
             ZoneId.systemDefault(),
         )
-    }
 
     fun parseSessionsInParallel(
         files: Array<File>,
         sourceName: String,
         logger: Logger,
         parser: (File) -> HistoricalSession?,
-    ): List<HistoricalSession> {
-        return files
+    ): List<HistoricalSession> =
+        files
             .toList()
             .parallelStream()
             .map { file ->
@@ -30,10 +29,8 @@ internal object HistoryReaderUtils {
                     logger.warn("[$sourceName] Failed to parse session file: ${file.name}", e)
                     null
                 }
-            }
-            .filter { it != null }
+            }.filter { it != null }
             .map { it!! }
             .toList()
             .sortedByDescending { it.timestamp }
-    }
 }

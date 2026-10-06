@@ -40,7 +40,10 @@ class CefTerminalPanel(
     @Volatile
     private var isPageLoaded = false
 
-    private data class PendingWrite(val base64: String, val needsAck: Boolean)
+    private data class PendingWrite(
+        val base64: String,
+        val needsAck: Boolean,
+    )
 
     private val pendingWrites = mutableListOf<PendingWrite>()
 
@@ -391,8 +394,18 @@ class CefTerminalPanel(
         private val RESIZE_ROWS_REGEX = Regex(""""rows"\s*:\s*(\d+)""")
 
         private fun parseResizeDimensions(sizeJson: String): Pair<Int, Int>? {
-            val cols = RESIZE_COLS_REGEX.find(sizeJson)?.groupValues?.get(1)?.toInt()
-            val rows = RESIZE_ROWS_REGEX.find(sizeJson)?.groupValues?.get(1)?.toInt()
+            val cols =
+                RESIZE_COLS_REGEX
+                    .find(sizeJson)
+                    ?.groupValues
+                    ?.get(1)
+                    ?.toInt()
+            val rows =
+                RESIZE_ROWS_REGEX
+                    .find(sizeJson)
+                    ?.groupValues
+                    ?.get(1)
+                    ?.toInt()
             return if (cols != null && rows != null && cols > 0 && rows > 0) cols to rows else null
         }
 

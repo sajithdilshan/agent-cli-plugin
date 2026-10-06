@@ -12,14 +12,13 @@ object SessionHistoryDeleter {
         sessionId: String,
         agentType: AgentType,
         projectPath: String,
-    ): Boolean {
-        return try {
+    ): Boolean =
+        try {
             deleteFor(agentType, sessionId, projectPath, agentHome = null)
         } catch (e: Exception) {
             LOG.warn("[AgentCLI] Failed to delete $agentType session $sessionId", e)
             false
         }
-    }
 
     private fun deleteFor(
         agentType: AgentType,

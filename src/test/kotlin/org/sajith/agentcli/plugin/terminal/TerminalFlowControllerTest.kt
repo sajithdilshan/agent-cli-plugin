@@ -16,7 +16,10 @@ class TerminalFlowControllerTest {
 
     /** Collects all calls made by the flow controller for assertion. */
     private class Recorder {
-        data class WriteRecord(val size: Int, val needsAck: Boolean)
+        data class WriteRecord(
+            val size: Int,
+            val needsAck: Boolean,
+        )
 
         val writes = CopyOnWriteArrayList<WriteRecord>()
         val pauseCount = AtomicInteger(0)

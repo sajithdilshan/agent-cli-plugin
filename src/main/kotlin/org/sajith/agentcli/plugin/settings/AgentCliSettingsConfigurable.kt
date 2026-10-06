@@ -27,15 +27,18 @@ import javax.swing.JCheckBox
 import javax.swing.JComponent
 import javax.swing.JPanel
 
-class AgentCliSettingsConfigurable : BoundSearchableConfigurable(
-    "Agent CLI",
-    "org.sajith.agentcli.plugin.settings",
-) {
+class AgentCliSettingsConfigurable :
+    BoundSearchableConfigurable(
+        "Agent CLI",
+        "org.sajith.agentcli.plugin.settings",
+    ) {
     private val settings = AgentCliSettings.getInstance()
 
     override fun apply() {
         super.apply()
-        ApplicationManager.getApplication().messageBus
+        ApplicationManager
+            .getApplication()
+            .messageBus
             .syncPublisher(AgentCliSettings.SETTINGS_CHANGED_TOPIC)
             .settingsChanged()
     }
@@ -175,12 +178,10 @@ class AgentCliSettingsConfigurable : BoundSearchableConfigurable(
                     comboBox(
                         AgentType.entries.filter { it != AgentType.SANDBOX },
                         textListCellRenderer { it?.displayName ?: "" },
-                    )
-                        .bindItem(
-                            { settings.sandboxUnderlyingAgent },
-                            { settings.sandboxUnderlyingAgent = it ?: AgentType.CLAUDE },
-                        )
-                        .comment("The agent running inside the sandbox — selects history parsing and resume syntax")
+                    ).bindItem(
+                        { settings.sandboxUnderlyingAgent },
+                        { settings.sandboxUnderlyingAgent = it ?: AgentType.CLAUDE },
+                    ).comment("The agent running inside the sandbox — selects history parsing and resume syntax")
                 }
                 row {
                     sandboxCheckbox =

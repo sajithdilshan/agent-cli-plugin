@@ -39,7 +39,8 @@ import javax.swing.SwingUtilities
 class AgentCliSessionFileEditor(
     private val project: Project,
     private val file: AgentCliSessionVirtualFile,
-) : UserDataHolderBase(), FileEditor {
+) : UserDataHolderBase(),
+    FileEditor {
     private val disposable = Disposer.newDisposable("AgentCliSessionFileEditor")
     private val rootPanel = JPanel(BorderLayout())
     private val session: AgentCliSession
@@ -56,12 +57,13 @@ class AgentCliSessionFileEditor(
     init {
         val sessionManager = SessionManager.getInstance(project)
         session =
-            sessionManager.createSession(
-                name = file.displayName,
-                agentType = file.agentType,
-                agentSessionId = file.agentSessionId,
-                isEditorHosted = true,
-            ).also { it.editorFileKey = file.key }
+            sessionManager
+                .createSession(
+                    name = file.displayName,
+                    agentType = file.agentType,
+                    agentSessionId = file.agentSessionId,
+                    isEditorHosted = true,
+                ).also { it.editorFileKey = file.key }
 
         val workingDir = project.basePath ?: System.getProperty("user.home")
         val command =
@@ -87,7 +89,9 @@ class AgentCliSessionFileEditor(
                     onExit = {
                         SwingUtilities.invokeLater {
                             if (!disposed) {
-                                com.intellij.openapi.fileEditor.FileEditorManager.getInstance(project).closeFile(file)
+                                com.intellij.openapi.fileEditor.FileEditorManager
+                                    .getInstance(project)
+                                    .closeFile(file)
                             }
                         }
                     },
@@ -108,7 +112,8 @@ class AgentCliSessionFileEditor(
             rootPanel.add(activeTerminal.component, BorderLayout.CENTER)
             activeTerminal.setResizeEnabled(true)
 
-            project.messageBus.connect(disposable)
+            project.messageBus
+                .connect(disposable)
                 .subscribe(
                     LafManagerListener.TOPIC,
                     LafManagerListener { activeTerminal.applyTheme() },
@@ -149,7 +154,9 @@ class AgentCliSessionFileEditor(
             val link =
                 ActionLink("Return to plugin view") {
                     returnToPluginRequested = true
-                    com.intellij.openapi.fileEditor.FileEditorManager.getInstance(project).closeFile(file)
+                    com.intellij.openapi.fileEditor.FileEditorManager
+                        .getInstance(project)
+                        .closeFile(file)
                 }
             banner.add(link, BorderLayout.EAST)
         }

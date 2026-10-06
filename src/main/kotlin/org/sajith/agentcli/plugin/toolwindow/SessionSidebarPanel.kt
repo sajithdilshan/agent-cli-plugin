@@ -64,9 +64,13 @@ import javax.swing.border.MatteBorder
  * Sidebar items are either a date group header or a history entry.
  */
 private sealed class SidebarItem {
-    data class Header(val title: String) : SidebarItem()
+    data class Header(
+        val title: String,
+    ) : SidebarItem()
 
-    data class HistoryEntry(val session: HistoricalSession) : SidebarItem()
+    data class HistoryEntry(
+        val session: HistoricalSession,
+    ) : SidebarItem()
 }
 
 class SessionSidebarPanel(
@@ -80,7 +84,8 @@ class SessionSidebarPanel(
     private val onOpenSessionInEditor: (AgentCliSession) -> Unit,
     private val onOpenHistorySessionInEditor: (HistoricalSession) -> Unit,
     private val onResumeHistorySessionInPluginView: (HistoricalSession) -> Unit,
-) : JPanel(BorderLayout()), Disposable {
+) : JPanel(BorderLayout()),
+    Disposable {
     private val activeSessionListModel = DefaultListModel<AgentCliSession>()
     private val activeSessionList = JBList(activeSessionListModel)
     private var selectedSession: AgentCliSession? = null
@@ -144,7 +149,8 @@ class SessionSidebarPanel(
 
         // Repaint the active session list when attention state changes, and refresh the
         // toggle icon so it can show an overlay dot while the sidebar is collapsed.
-        project.messageBus.connect(this)
+        project.messageBus
+            .connect(this)
             .subscribe(
                 SessionManager.SESSION_ATTENTION_TOPIC,
                 SessionManager.SessionAttentionListener {
@@ -162,9 +168,7 @@ class SessionSidebarPanel(
         return if (isCollapsed && anyActiveSessionNeedsAttention()) DotOverlayIcon(base) else base
     }
 
-    private fun anyActiveSessionNeedsAttention(): Boolean {
-        return SessionManager.getInstance(project).sessions.any { it.needsAttention }
-    }
+    private fun anyActiveSessionNeedsAttention(): Boolean = SessionManager.getInstance(project).sessions.any { it.needsAttention }
 
     /**
      * Force the toolbar to re-run `update()` on the toggle action so its icon re-picks
@@ -214,7 +218,8 @@ class SessionSidebarPanel(
                 add(toggle)
             }
         val toolbar =
-            ActionManager.getInstance()
+            ActionManager
+                .getInstance()
                 .createActionToolbar(ActionPlaces.TOOLWINDOW_CONTENT, group, false)
         toolbar.targetComponent = this
         toolbar.component.border = MatteBorder(0, 0, 0, 1, JBColor.border())
@@ -592,8 +597,8 @@ class SessionSidebarPanel(
     private fun readHistoryForAgent(
         agentType: AgentType,
         projectPath: String,
-    ): List<HistoricalSession> {
-        return try {
+    ): List<HistoricalSession> =
+        try {
             when (agentType) {
                 AgentType.CLAUDE -> ClaudeCodeHistoryReader.readHistory(projectPath)
                 AgentType.CURSOR -> CursorHistoryReader.readHistory(projectPath)
@@ -604,7 +609,6 @@ class SessionSidebarPanel(
             LOG.warn("Failed to read ${agentType.displayName} history", e)
             emptyList()
         }
-    }
 
     private fun groupByDate(sessions: List<HistoricalSession>): List<Pair<String, List<HistoricalSession>>> {
         val today = LocalDate.now()
@@ -746,8 +750,8 @@ class SessionSidebarPanel(
             index: Int,
             isSelected: Boolean,
             cellHasFocus: Boolean,
-        ): Component {
-            return when (value) {
+        ): Component =
+            when (value) {
                 is SidebarItem.Header ->
                     JPanel(BorderLayout()).apply {
                         background = list.background
@@ -812,14 +816,16 @@ class SessionSidebarPanel(
                     }
                 }
             }
-        }
     }
 
     /**
      * Renders text with a horizontal green gradient matching the sandbox terminal indicator.
      * Theme-aware: brighter greens on dark, deeper greens on light.
      */
-    private class GradientLabel(text: String, font: Font) : JLabel(text) {
+    private class GradientLabel(
+        text: String,
+        font: Font,
+    ) : JLabel(text) {
         init {
             this.font = font
             isOpaque = false
@@ -854,7 +860,9 @@ class SessionSidebarPanel(
      * Used for the sidebar toggle when the panel is collapsed and an active session
      * is waiting on the user.
      */
-    private class DotOverlayIcon(private val base: Icon) : Icon {
+    private class DotOverlayIcon(
+        private val base: Icon,
+    ) : Icon {
         private val fillColor = JBColor(Color(0xE53935), Color(0xEF5350))
 
         override fun paintIcon(

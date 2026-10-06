@@ -30,7 +30,12 @@ object CodexHistoryReader {
         if (!sessionsDir.exists() || !sessionsDir.isDirectory) return emptyList()
 
         val index = readSessionIndex(codexDir)
-        val sessionFiles = sessionsDir.walkTopDown().filter { it.extension == "jsonl" }.toList().toTypedArray()
+        val sessionFiles =
+            sessionsDir
+                .walkTopDown()
+                .filter { it.extension == "jsonl" }
+                .toList()
+                .toTypedArray()
 
         return HistoryReaderUtils.parseSessionsInParallel(
             files = sessionFiles,
@@ -252,14 +257,13 @@ object CodexHistoryReader {
         return if (type == "user_message" && !message.isNullOrBlank()) message else ""
     }
 
-    private fun parseTimestamp(ts: String): LocalDateTime? {
-        return try {
+    private fun parseTimestamp(ts: String): LocalDateTime? =
+        try {
             val instant = Instant.parse(ts)
             LocalDateTime.ofInstant(instant, ZoneId.systemDefault())
         } catch (_: Exception) {
             null
         }
-    }
 
     /**
      * Finds the session file for a given session ID by scanning ~/.codex/sessions/ recursively.
