@@ -5,7 +5,7 @@
 **Agent CLI** is a JetBrains IntelliJ Platform plugin that runs AI agent CLI sessions (Claude Code, Cursor, OpenAI Codex) inside the IDE with a fully embedded xterm.js terminal backed by a PTY process.
 
 * Plugin ID: `org.sajith.agentcli.plugin`
-* Version: `1.1.0-eap.1` (defined in `gradle.properties`)
+* Version: `1.1.0-eap.2` (defined in `gradle.properties`)
 * Author: Sajith Edirisinghe
 * License: Apache 2.0
 
