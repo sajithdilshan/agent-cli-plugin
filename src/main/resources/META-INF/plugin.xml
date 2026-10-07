@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>org.sajith.agentcli.plugin</id>
     <name>Agent CLI</name>
-    <version>1.1.0-eap.2</version>
+    <version>1.1.0-eap.3</version>
     <vendor>Sajith Edirisinghe</vendor>
 
     <description><![CDATA[
@@ -75,6 +75,8 @@
         <fileEditorProvider implementation="org.sajith.agentcli.plugin.editor.AgentCliSessionFileEditorProvider"/>
 
         <fileIconProvider implementation="org.sajith.agentcli.plugin.editor.AgentCliSessionFileIconProvider"/>
+
+        <editorTabTitleProvider implementation="org.sajith.agentcli.plugin.editor.AgentCliSessionTabTitleProvider"/>
 
         <notificationGroup id="Agent CLI"
                            displayType="BALLOON"

@@ -147,7 +147,7 @@ Platform version is controlled via `gradle.properties` (`platformVersion`); the 
 
 ## Version
 
-Plugin version is **`1.1.0-eap.2`** (see `gradle.properties` and `plugin.xml`).
+Plugin version is **`1.1.0-eap.3`** (see `gradle.properties` and `plugin.xml`).
 
 ## License
 
