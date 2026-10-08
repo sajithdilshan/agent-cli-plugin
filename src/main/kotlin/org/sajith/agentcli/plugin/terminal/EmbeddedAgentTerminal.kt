@@ -7,6 +7,7 @@ import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.openapi.vfs.VfsUtil
 import org.jetbrains.ide.BuiltInServerManager
 import org.sajith.agentcli.plugin.AgentType
 import org.sajith.agentcli.plugin.mod.ClaudeModInstaller
@@ -125,6 +126,9 @@ class EmbeddedAgentTerminal(
                 LOG.warn("[AgentCLI] File link target not found: $path")
                 return@invokeLater
             }
+            // The agent wrote the file behind the IDE's back: a VFS file already known is
+            // returned as cached above, so re-read it from disk before navigating.
+            VfsUtil.markDirtyAndRefresh(false, false, false, file)
             val line = link.line?.minus(1) ?: -1
             OpenFileDescriptor(project, file, line, 0).navigate(true)
         }
