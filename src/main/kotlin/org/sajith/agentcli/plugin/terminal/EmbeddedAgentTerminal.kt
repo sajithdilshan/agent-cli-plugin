@@ -3,13 +3,18 @@ package org.sajith.agentcli.plugin.terminal
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.vfs.LocalFileSystem
 import org.jetbrains.ide.BuiltInServerManager
 import org.sajith.agentcli.plugin.AgentType
+import org.sajith.agentcli.plugin.mod.ClaudeModInstaller
 import org.sajith.agentcli.plugin.notify.SessionAttentionService
 import org.sajith.agentcli.plugin.session.AgentCliSession
 import org.sajith.agentcli.plugin.settings.AgentCliSettings
+import java.io.File
+import java.nio.file.Path
 import javax.swing.JComponent
 import javax.swing.SwingUtilities
 
@@ -20,9 +25,9 @@ import javax.swing.SwingUtilities
  */
 class EmbeddedAgentTerminal(
     parentDisposable: Disposable,
-    project: Project,
+    private val project: Project,
     private val session: AgentCliSession,
-    workingDirectory: String,
+    private val workingDirectory: String,
     command: String,
     isResume: Boolean,
     onExit: (exitCode: Int) -> Unit,
@@ -48,6 +53,7 @@ class EmbeddedAgentTerminal(
                 },
                 onResize = { cols, rows -> ptyBridgeRef.resize(cols, rows) },
                 onAck = { flowControllerRef.ack() },
+                onOpenFile = ::openFile,
                 loadingText = if (isResume) "Resuming Session..." else "Starting Session...",
                 sandbox = session.agentType == AgentType.SANDBOX,
             )
@@ -104,6 +110,26 @@ class EmbeddedAgentTerminal(
 
     fun applyTheme() = cefPanel.applyTheme()
 
+    /** Opens a file link from the terminal, limited to the session's directory and the project. */
+    private fun openFile(link: FileLink) {
+        val path = Path.of(link.path).normalize()
+        val roots = listOfNotNull(workingDirectory, project.basePath).map { Path.of(it).normalize() }
+        if (!path.isAbsolute || roots.none { path.startsWith(it) }) {
+            LOG.warn("[AgentCLI] Blocked file link outside the project: ${link.path}")
+            return
+        }
+        ApplicationManager.getApplication().invokeLater {
+            if (project.isDisposed) return@invokeLater
+            val file = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(path)
+            if (file == null || file.isDirectory) {
+                LOG.warn("[AgentCLI] File link target not found: $path")
+                return@invokeLater
+            }
+            val line = link.line?.minus(1) ?: -1
+            OpenFileDescriptor(project, file, line, 0).navigate(true)
+        }
+    }
+
     private fun shellCommandFor(agentCommand: String): Array<String> {
         val isWindows = System.getProperty("os.name").lowercase().contains("win")
         return if (isWindows) {
@@ -119,6 +145,14 @@ class EmbeddedAgentTerminal(
         val env = HashMap(System.getenv())
         env["TERM"] = "xterm-256color"
         env["COLORTERM"] = "truecolor"
+        // xterm.js renders OSC 8 hyperlinks, but agents cannot detect that from TERM alone.
+        env["FORCE_HYPERLINK"] = "1"
+        if (session.agentType == AgentType.CLAUDE) {
+            ClaudeModInstaller.modDirIfEnabled()?.let { dir ->
+                val existing = env["CLAUDE_CODE_PLUGIN_DIRS"]?.takeIf { it.isNotBlank() }
+                env["CLAUDE_CODE_PLUGIN_DIRS"] = listOfNotNull(existing, dir.toString()).joinToString(File.pathSeparator)
+            }
+        }
 
         env["AGENT_CLI_PLUGIN_SESSION_ID"] = session.id
         env["AGENT_CLI_PLUGIN_AGENT"] = session.agentType.name.lowercase()

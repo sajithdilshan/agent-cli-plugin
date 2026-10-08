@@ -20,6 +20,7 @@ import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.builder.selected
 import com.intellij.ui.dsl.listCellRenderer.textListCellRenderer
 import org.sajith.agentcli.plugin.AgentType
+import org.sajith.agentcli.plugin.mod.ClaudeModInstaller
 import org.sajith.agentcli.plugin.notify.HookInstaller
 import java.awt.BorderLayout
 import java.awt.Dimension
@@ -36,6 +37,7 @@ class AgentCliSettingsConfigurable :
 
     override fun apply() {
         super.apply()
+        if (!settings.claudeFileLinksModEnabled) ClaudeModInstaller.uninstall()
         ApplicationManager
             .getApplication()
             .messageBus
@@ -128,6 +130,16 @@ class AgentCliSettingsConfigurable :
                     cmdField.enabledIf(claudeCheckbox.selected)
                 }
             }
+            group("Claude Code Mods") {
+                row {
+                    checkBox("Clickable file links")
+                        .bindSelected(settings::claudeFileLinksModEnabled)
+                        .comment(
+                            "Adds a link under each tool call that touches a file; clicking it opens the file in the editor. " +
+                                "Applies to Claude sessions started after the change.",
+                        )
+                }
+            }.visibleIf(claudeCheckbox.selected)
             lateinit var cursorCheckbox: Cell<JCheckBox>
             group("Cursor Agent") {
                 row("Command:") {

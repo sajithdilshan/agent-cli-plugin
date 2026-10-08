@@ -279,7 +279,23 @@ internal fun buildCefTerminalPageHtml(
                 allowProposedApi: true,
                 scrollback: 10000,
                 macOptionIsMeta: true,
-                drawBoldTextInBrightColors: true
+                drawBoldTextInBrightColors: true,
+                // OSC 8 hyperlinks (agents emit these when FORCE_HYPERLINK=1),
+                // routed through the same bridge as plain-text URLs.
+                linkHandler: {
+                    // xterm drops non-http(s) OSC 8 links without this; activate filters schemes itself.
+                    allowNonHttpProtocols: true,
+                    activate: function(event, uri) {
+                        try {
+                            var parsed = new URL(uri);
+                            if (parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'agentcli:') {
+                                $openLinkQueryJs
+                            }
+                        } catch(e) {
+                            // Malformed URI — ignore
+                        }
+                    }
+                }
             });
 
             var fitAddon = new FitAddon.FitAddon();

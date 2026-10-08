@@ -1,0 +1,6 @@
+{
+  "name": "agent-cli-links",
+  "version": "0.1.0",
+  "author": { "name": "Sajith Edirisinghe" },
+  "description": "Makes files Claude touches clickable, opening them in the JetBrains IDE via agentcli:// links"
+}

@@ -28,6 +28,7 @@ class CefTerminalPanel(
     private val onInput: (String) -> Unit,
     private val onResize: (cols: Int, rows: Int) -> Unit,
     private val onAck: () -> Unit = {},
+    private val onOpenFile: (FileLink) -> Unit = {},
     private val loadingText: String = "Starting Session...",
     private val sandbox: Boolean = false,
 ) : Disposable {
@@ -113,6 +114,9 @@ class CefTerminalPanel(
                 val scheme = uri.scheme?.lowercase()
                 if (scheme == "http" || scheme == "https") {
                     BrowserUtil.browse(uri)
+                } else if (scheme == FileLink.SCHEME) {
+                    FileLink.parse(uri)?.let(onOpenFile)
+                        ?: LOG.warn("[AgentCLI] CefTerminalPanel: malformed file link: $url")
                 } else {
                     LOG.warn("[AgentCLI] CefTerminalPanel: blocked non-http(s) link: $url")
                 }

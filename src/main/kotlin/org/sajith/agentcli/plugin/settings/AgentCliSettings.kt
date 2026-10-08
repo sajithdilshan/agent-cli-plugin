@@ -29,6 +29,7 @@ class AgentCliSettings : PersistentStateComponent<AgentCliSettings.State> {
         var flowControlEnabled: Boolean = false,
         var alwaysOpenNewSessionInEditor: Boolean = false,
         var alwaysResumeSessionInEditor: Boolean = false,
+        var claudeFileLinksModEnabled: Boolean = false,
     )
 
     private var state = State()
@@ -133,6 +134,13 @@ class AgentCliSettings : PersistentStateComponent<AgentCliSettings.State> {
         get() = state.alwaysResumeSessionInEditor
         set(value) {
             state.alwaysResumeSessionInEditor = value
+        }
+
+    /** Loads the bundled `agent-cli-links` mod into Claude sessions (clickable file links). */
+    var claudeFileLinksModEnabled: Boolean
+        get() = state.claudeFileLinksModEnabled
+        set(value) {
+            state.claudeFileLinksModEnabled = value
         }
 
     fun interface SettingsChangeListener {

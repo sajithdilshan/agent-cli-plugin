@@ -51,6 +51,11 @@ tasks.test {
     useJUnitPlatform()
 }
 
+// The Claude mod ships its hooks only: its tests and the types Claude Code generates stay out.
+tasks.processResources {
+    exclude("claude-mod/*/tests/**", "claude-mod/*/.claude-plugin/types/**", "claude-mod/*/tsconfig.json")
+}
+
 tasks.named("buildPlugin") {
     dependsOn(tasks.test)
 }
