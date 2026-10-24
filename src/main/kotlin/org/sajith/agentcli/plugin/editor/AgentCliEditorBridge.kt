@@ -1,7 +1,7 @@
 package org.sajith.agentcli.plugin.editor
 
 import com.intellij.openapi.components.Service
-import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.util.messages.Topic
 import org.sajith.agentcli.plugin.AgentType
@@ -24,7 +24,7 @@ class AgentCliEditorBridge(
         displayName: String,
     ) {
         val file = AgentCliSessionVirtualFile.forResume(agentType, agentSessionId, displayName)
-        FileEditorManager.getInstance(project).openFile(file, true)
+        OpenFileDescriptor(project, file).navigate(true)
     }
 
     fun openNewSessionInEditor(
@@ -32,7 +32,7 @@ class AgentCliEditorBridge(
         displayName: String,
     ) {
         val file = AgentCliSessionVirtualFile.forNewSession(agentType, displayName)
-        FileEditorManager.getInstance(project).openFile(file, true)
+        OpenFileDescriptor(project, file).navigate(true)
     }
 
     fun requestResumeInPluginView(

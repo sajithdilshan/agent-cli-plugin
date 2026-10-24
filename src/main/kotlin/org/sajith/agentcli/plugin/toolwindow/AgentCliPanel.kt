@@ -9,6 +9,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerEvent
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
@@ -299,7 +300,7 @@ class AgentCliPanel(
             val file = virtualFileFor(session) ?: return
             selectedEditorHosted = true
             updateTerminalPanelVisibility()
-            FileEditorManager.getInstance(project).openFile(file, true)
+            OpenFileDescriptor(project, file).navigate(true)
             return
         }
         val terminal = terminals[session.id]

@@ -24,6 +24,9 @@ class AgentCliSessionVirtualFile private constructor(
 
     override fun getPath(): String = "agent-cli-session://${agentType.name}/$key"
 
+    /** Shown as the editor tab tooltip (the platform falls back to this when no provider supplies one). */
+    override fun getPresentableUrl(): String = displayName
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is AgentCliSessionVirtualFile) return false
