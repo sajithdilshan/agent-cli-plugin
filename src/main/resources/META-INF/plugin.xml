@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>org.sajith.agentcli.plugin</id>
     <name>Agent CLI</name>
-    <version>1.1.0-eap.4</version>
+    <version>1.1.0</version>
     <vendor>Sajith Edirisinghe</vendor>
 
     <description><![CDATA[
@@ -21,6 +21,13 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <h3>1.1.0</h3>
+    <ul>
+        <li>Added an opt-in Claude Code mod (Settings → Tools → Agent CLI → Claude Code Mods) that adds a clickable link under each tool call that touches a file, opening it in the IDE at the changed line.</li>
+        <li>Editor tabs hosting a session now show the session name in their tooltip.</li>
+        <li>Updated the bundled xterm.js terminal to 6.1.0 (beta).</li>
+        <li>Replaced deprecated IntelliJ Platform API usages.</li>
+    </ul>
     <h3>1.0.1</h3>
     <ul>
         <li>Fixed a crash when opening a session in an editor tab if the IDE's embedded browser process (JCEF) had died earlier in a long-running IDE session.</li>
