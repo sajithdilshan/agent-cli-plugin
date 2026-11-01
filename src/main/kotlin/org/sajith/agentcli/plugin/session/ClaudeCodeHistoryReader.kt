@@ -10,6 +10,50 @@ import java.io.StringReader
 
 object ClaudeCodeHistoryReader {
     private val LOG = Logger.getInstance(ClaudeCodeHistoryReader::class.java)
+    private const val MAX_LINES_FOR_FIRST_MESSAGE = 200
+
+    /** Tags Claude Code wraps around injected (non-user-typed) "user" entries. */
+    private val SYSTEM_TAG_PREFIXES =
+        listOf(
+            "<command-name>",
+            "<command-message>",
+            "<command-args>",
+            "<local-command-",
+            "<system-reminder>",
+            "<task-notification>",
+            "<bash-input>",
+            "<bash-stdout>",
+            "<bash-stderr>",
+            "<user-prompt-submit-hook>",
+            "Caveat:",
+        )
+    private val COMMAND_NAME_REGEX = Regex("<command-name>\\s*(.*?)\\s*</command-name>", RegexOption.DOT_MATCHES_ALL)
+    private val COMMAND_ARGS_REGEX = Regex("<command-args>\\s*(.*?)\\s*</command-args>", RegexOption.DOT_MATCHES_ALL)
+
+    internal fun isSystemGenerated(text: String): Boolean {
+        val trimmed = text.trimStart()
+        return SYSTEM_TAG_PREFIXES.any { trimmed.startsWith(it) }
+    }
+
+    /** Turns a `<command-name>` entry into "/cmd args"; other system entries yield "". */
+    internal fun commandDisplayText(text: String): String {
+        val name =
+            COMMAND_NAME_REGEX
+                .find(text)
+                ?.groupValues
+                ?.get(1)
+                ?.trim()
+                .orEmpty()
+        if (name.isEmpty()) return ""
+        val args =
+            COMMAND_ARGS_REGEX
+                .find(text)
+                ?.groupValues
+                ?.get(1)
+                ?.trim()
+                .orEmpty()
+        return if (args.isEmpty()) name else "$name $args"
+    }
 
     fun readHistory(
         projectPath: String,
@@ -35,10 +79,11 @@ object ClaudeCodeHistoryReader {
      * Uses GSON streaming (JsonReader) with skipValue() to avoid building full JSON trees.
      * Uses file modification time as timestamp.
      */
-    private fun parseSessionFile(file: File): HistoricalSession {
+    internal fun parseSessionFile(file: File): HistoricalSession {
         val sessionId = file.nameWithoutExtension
         var firstUserMessage = ""
         var customTitle = ""
+        var fallbackMessage = ""
         var linesScanned = 0
 
         file.bufferedReader().useLines { lines ->
@@ -51,14 +96,27 @@ object ClaudeCodeHistoryReader {
                     if (customTitle.isNotEmpty()) break // title found — no need for firstMessage
                 }
 
-                // First user message: only near the top, not needed if we already have a title
-                if (firstUserMessage.isEmpty() && linesScanned < 50 && line.contains("\"type\":\"user\"")) {
-                    firstUserMessage = extractUserMessageStreaming(line)
+                // First user message: only near the top, not needed if we already have a title.
+                // Skip system-generated entries (slash commands, caveats, reminders) so the
+                // actual prompt typed by the user is picked up.
+                if (firstUserMessage.isEmpty() &&
+                    linesScanned < MAX_LINES_FOR_FIRST_MESSAGE &&
+                    line.contains("\"type\":\"user\"")
+                ) {
+                    val text = extractUserMessageStreaming(line)
+                    if (text.isNotBlank()) {
+                        if (isSystemGenerated(text)) {
+                            if (fallbackMessage.isEmpty()) fallbackMessage = commandDisplayText(text)
+                        } else {
+                            firstUserMessage = text
+                        }
+                    }
                 }
 
                 linesScanned++
             }
         }
+        if (firstUserMessage.isEmpty()) firstUserMessage = fallbackMessage
 
         val timestamp = HistoryReaderUtils.fileTimestamp(file)
 
@@ -105,12 +163,16 @@ object ClaudeCodeHistoryReader {
             var type: String? = null
             var messageRaw: String? = null
             var isMessageComplex = false
+            var isMeta = false
 
             JsonReader(StringReader(line)).use { reader ->
                 reader.beginObject()
                 while (reader.hasNext()) {
                     when (reader.nextName()) {
                         "type" -> type = reader.nextString()
+                        "isMeta" -> {
+                            if (reader.peek() == JsonToken.BOOLEAN) isMeta = reader.nextBoolean() else reader.skipValue()
+                        }
                         "message" -> {
                             if (reader.peek() == JsonToken.STRING) {
                                 messageRaw = reader.nextString()
@@ -132,7 +194,7 @@ object ClaudeCodeHistoryReader {
                 }
             }
 
-            if (type != "user") return ""
+            if (type != "user" || isMeta) return ""
             if (messageRaw != null) return messageRaw
 
             // Complex message structure — use tree parse (rare case)
