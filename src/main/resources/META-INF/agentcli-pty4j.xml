@@ -1,0 +1,2 @@
+<!-- Empty: exists only so the optional com.intellij.modules.pty4j dependency puts pty4j on the plugin classpath. -->
+<idea-plugin/>

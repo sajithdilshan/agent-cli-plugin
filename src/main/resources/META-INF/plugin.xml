@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>org.sajith.agentcli.plugin</id>
     <name>Agent CLI</name>
-    <version>1.2.0</version>
+    <version>1.2.1</version>
     <vendor>Sajith Edirisinghe</vendor>
 
     <description><![CDATA[
@@ -21,6 +21,10 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <h3>1.2.1</h3>
+    <ul>
+        <li>Fixed a crash (NoClassDefFoundError: com/pty4j/PtyProcessBuilder) when starting a session on IntelliJ Platform 2026.3+ — the plugin now declares an optional dependency on the bundled PTY4J plugin.</li>
+    </ul>
     <h3>1.2.0</h3>
     <ul>
         <li>Fixed Claude Code session history showing slash commands (e.g. /model) instead of the first prompt you typed.</li>
@@ -53,6 +57,9 @@
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.jcef</depends>
+    <!-- 2026.3+ ships pty4j as a separate bundled plugin; on 2026.1/2026.2 it is part of the core
+         classpath and this plugin id doesn't exist, so the dependency must stay optional. -->
+    <depends optional="true" config-file="agentcli-pty4j.xml">com.intellij.modules.pty4j</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow id="Agent CLI"
