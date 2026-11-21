@@ -45,7 +45,11 @@ nav .wrap{display:flex;align-items:center;justify-content:space-between;height:6
 .btn.primary:hover{opacity:.85}
 
 .shot{padding-bottom:96px}
-.shot img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);box-shadow:0 30px 80px -30px rgb(0 0 0/.45)}
+.shot img{display:block;width:100%;height:auto}
+.config{text-align:center;padding-bottom:104px}
+.config h2{font-size:clamp(26px,4vw,36px);font-weight:700;letter-spacing:-.03em}
+.config p{color:var(--muted);margin:10px auto 32px;max-width:520px}
+.config img{display:block;width:100%;max-width:860px;height:auto;margin:0 auto}
 
 .features{display:grid;grid-template-columns:repeat(3,1fr);gap:48px 40px;padding-bottom:104px}
 @media(max-width:820px){.features{grid-template-columns:1fr 1fr}}
@@ -81,7 +85,7 @@ footer .row a:hover{color:var(--fg)}
 </div></header>
 
 <section class="shot"><div class="wrap">
-  <img src="docs/images/plugin.png" alt="Agent CLI tool window with an embedded agent terminal and session sidebar" width="3326" height="3042" fetchpriority="high">
+  <img src="docs/images/plugin.png" alt="Agent CLI tool window with an embedded agent terminal and session sidebar" width="2828" height="2064" fetchpriority="high">
 </div></section>
 
 <section id="features"><div class="wrap features">
@@ -91,6 +95,12 @@ footer .row a:hover{color:var(--fg)}
   <div><h3>Attention alerts</h3><p>Get an IDE and OS notification when an agent is waiting on you.</p></div>
   <div><h3>Jump to changed files</h3><p>An optional Claude Code mod adds links that open each edited file at the changed line.</p></div>
   <div><h3>Sandbox mode</h3><p>Run any agent through a containerized wrapper such as <a href="https://github.com/sajithdilshan/claude-crate" target="_blank" rel="noopener"><code>claude-crate</code></a>.</p></div>
+</div></section>
+
+<section class="config"><div class="wrap">
+  <h2>Configured in one place</h2>
+  <p>Pick your agents and commands, toggle the Claude Code mods, set up a sandbox and install attention hooks, all under Settings → Tools → Agent CLI.</p>
+  <img src="docs/images/settings.png" alt="Agent CLI settings page" width="2334" height="2120" loading="lazy">
 </div></section>
 </main>
 

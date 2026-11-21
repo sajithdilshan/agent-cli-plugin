@@ -35,6 +35,7 @@ No Warranty: This software is provided "as is," without warranty of any kind. Us
     * Sandbox — the configured history directory, parsed using the underlying agent's format (see [Sandbox agent](#sandbox-agent))
 * **Open session in code editor** — right-click any active or historical session in the sidebar and pick **Open in Code Editor** to move the session into a regular editor tab. A **Return to plugin view** link at the top of the tab moves it back to the tool window. Each transition is a clean close + resume, so the sidebar's active-sessions list stays in sync regardless of where the session is displayed; closing the editor tab closes the session.
 * **Attention notifications** — when an agent needs your input (permission prompt, idle confirmation, Codex permission request), the session row shows a red dot instead of the green play icon and an IDE balloon pops up (with an OS banner). Opt-in: install the hooks from **Settings → Tools → Agent CLI → Attention Notifications** and they merge idempotently into `~/.claude/settings.json` and `~/.codex/hooks.json` with `.bak` backups; Uninstall cleanly removes them. Windows is supported via a bundled PowerShell script. Agents launched outside the IDE are a no-op — the hook skips the HTTP call entirely.
+* **Clickable file links (Claude Code mod)** — opt-in under **Settings → Tools → Agent CLI → Claude Code Mods**. Adds a link under each Claude Code tool call that touches a file; clicking it opens the file in the IDE at the changed line. Links are limited to the session's working directory and the project, and the file is refreshed from disk before opening.
 * **High-performance embedded terminal** — xterm.js-based with optional watermark flow control, clickable URL detection, UTF-8 encoding, and a 10,000-line scrollback buffer.
 * **Theme sync** — terminal colors and scrollbars follow the IDE look-and-feel / editor colors and update dynamically when the theme changes.
 * **Settings** — per-agent enable toggles and launch commands, terminal font size, and flow control toggle in **Settings → Tools → Agent CLI**.
@@ -59,9 +60,11 @@ No Warranty: This software is provided "as is," without warranty of any kind. Us
 | **Claude command** | Command used to start Claude Code (default: `claude`). |
 | **Cursor command** | Command used to start Cursor agent (default: `agent`). |
 | **Codex command** | Command used to start Codex CLI (default: `codex`). |
-| **Sandbox command** | Command used to start the sandboxed agent. Use `{dir}` where the project path should be inserted (e.g. `claude-crate --workdir {dir}`); if omitted, the path is appended. |
+| **Sandbox command** | Command used to start the sandboxed agent. Use `{dir}` where the project path should be inserted (e.g. `claude-crate --workdir {dir}`); if omitted, the path is appended. Optionally use `{project_args}` for per-project arguments. |
+| **Sandbox project args** | Per-project extra arguments substituted into the sandbox command's `{project_args}` placeholder (e.g. `--overlay my-project`). Set under **Settings → Tools → Agent CLI → Project**; stored in the project workspace file, not shared via VCS. If the placeholder is absent, the args are appended. |
 | **Sandbox history dir** | Base directory where the sandbox stores agent history (e.g. `~/.claude-crate`). |
 | **Sandbox runs as** | The agent running inside the sandbox (Claude / Cursor / Codex). Selects which history parser and resume syntax are used. |
+| **Clickable file links** | Claude Code mod that adds an open-in-IDE link under each tool call that touches a file. Applies to Claude sessions started after the change. |
 | **Terminal font size** | Font size for the embedded xterm (allowed range as in the settings UI). |
 | **Enable flow control** | Throttle PTY output behind an xterm.js write-ack watermark. Leave off unless fast-output agents cause terminal stuttering. |
 | **Always open new sessions in code editor** | When enabled, new sessions open as regular editor tabs instead of in the tool window. You can still open individual sessions in the editor on demand via the sidebar's right-click menu regardless of this setting. |
@@ -74,9 +77,10 @@ Persistent settings are stored in the application-level component configured in 
 
 The **Sandbox** agent type runs an agent CLI through a generic wrapper command instead of invoking the CLI directly. This is useful when you want the agent to run in an isolated environment — for example, inside a container where it can only touch the mounted project directory.
 
-It is intentionally generic: the plugin doesn't know or care what the wrapper does. You tell it three things in **Settings → Tools → Agent CLI → Sandbox**:
+It is intentionally generic: the plugin doesn't know or care what the wrapper does. You configure it in **Settings → Tools → Agent CLI → Sandbox**:
 
-* **Command** — the wrapper command, with `{dir}` marking where the project path goes (it is inserted quoted; if `{dir}` is absent the path is appended).
+* **Command** — the wrapper command, with `{dir}` marking where the project path goes (it is inserted quoted; if `{dir}` is absent the path is appended). Optionally add `{project_args}` to insert per-project arguments.
+* **Project args** *(optional, per project)* — extra arguments for `{project_args}`, set under **Settings → Tools → Agent CLI → Project**. Useful when the wrapper needs a different flag per project (e.g. an overlay name).
 * **History dir** — the base directory where the sandboxed agent writes its history (replaces the underlying agent's default home, e.g. `~/.claude-crate` in place of `~/.claude`).
 * **Runs as** — which agent actually runs inside the sandbox. This selects the history parser, project-path encoding, and resume syntax.
 
@@ -92,7 +96,7 @@ Resume reuses the underlying agent's syntax with the project path injected, e.g.
 
 | Setting | Value |
 | ------- | ----- |
-| **Command** | `claude-crate --workdir {dir}` |
+| **Command** | `claude-crate --workdir {dir} {project_args}` |
 | **History dir** | `~/.claude-crate` |
 | **Runs as** | `Claude` |
 
