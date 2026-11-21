@@ -59,9 +59,13 @@ nav .wrap{display:flex;align-items:center;justify-content:space-between;height:6
 .features p{color:var(--muted);font-size:15px}
 .features p a{color:var(--accent)}
 
-footer{border-top:1px solid var(--line);padding:32px 0 48px;font-size:12.5px;color:var(--muted)}
-footer .row{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;font-size:14px}
-footer .row a:hover{color:var(--fg)}
+footer{border-top:1px solid var(--line);padding:40px 0 56px;color:var(--muted)}
+footer .top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px}
+footer .top .brand{color:var(--fg)}
+footer nav{display:flex;flex-wrap:wrap;gap:8px 24px;font-size:14px}
+footer nav a:hover{color:var(--fg)}
+footer .legal{margin-top:28px;font-size:12.5px;max-width:720px}
+footer .legal p+p{margin-top:8px}
 </style>
 </head>
 <body>
@@ -105,11 +109,19 @@ footer .row a:hover{color:var(--fg)}
 </main>
 
 <footer><div class="wrap">
-  <div class="row">
-    <span>Agent CLI · Apache 2.0</span>
-    <span><a href="https://plugins.jetbrains.com/plugin/31117-agent-cli" target="_blank" rel="noopener">Marketplace</a> · <a href="https://github.com/sajithdilshan/agent-cli-plugin" target="_blank" rel="noopener">GitHub</a></span>
+  <div class="top">
+    <span class="brand"><img src="docs/images/pluginIcon.svg" alt="" width="26" height="26" loading="lazy">Agent CLI</span>
+    <nav aria-label="Footer">
+      <a href="https://github.com/sajithdilshan/agent-cli-plugin/blob/main/GETTING_STARTED.md" target="_blank" rel="noopener">Getting started</a>
+      <a href="https://github.com/sajithdilshan/agent-cli-plugin/tree/main/changelog" target="_blank" rel="noopener">Changelog</a>
+      <a href="https://github.com/sajithdilshan/agent-cli-plugin/issues" target="_blank" rel="noopener">Report an issue</a>
+      <a href="https://plugins.jetbrains.com/plugin/31117-agent-cli" target="_blank" rel="noopener">Marketplace ↗</a>
+    </nav>
   </div>
-  <p>An independent project, not affiliated with or endorsed by Anthropic PBC, Anysphere Inc. or OpenAI. "Claude" and "Claude Code" are trademarks of Anthropic PBC, "Cursor" of Anysphere Inc., and "OpenAI" and "Codex" of OpenAI. They are used here only to describe compatibility. Provided "as is", without warranty.</p>
+  <div class="legal">
+    <p>© 2026 Sajith Edirisinghe · Licensed under Apache 2.0</p>
+    <p>An independent project, not affiliated with or endorsed by Anthropic, Anysphere (Cursor) or OpenAI. Product names are trademarks of their respective owners and are used only to describe compatibility.</p>
+  </div>
 </div></footer>
 </body>
 </html>
